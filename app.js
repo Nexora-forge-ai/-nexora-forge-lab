@@ -31,7 +31,7 @@ const done=new Set(JSON.parse(localStorage.getItem("nexoraAcademyDone")||"[]"));
 const samples={
  html:'<h1>سلام NEXORA!</h1>\n<p>من دارم HTML یاد می‌گیرم.</p>\n<button onclick="document.querySelector(\'p\').textContent=\'آفرین!\'">کلیک کن</button>',
  css:'<h1 class="title">سلام NEXORA!</h1>\n<p>این یک تمرین CSS است.</p>\n<button>دکمه نمونه</button>',
- js:'<h1 id="title">سلام!</h1>\n<button id="change">تغییر متن</button>\n<script>\ndocument.querySelector("#change").addEventListener("click",()=>{\n document.querySelector("#title").textContent="تو موفق شدی!";\n});\n<\\/script>'
+ js:'document.querySelector("#change").addEventListener("click",()=>{\n document.querySelector("#title").textContent="تو موفق شدی!";\n});'
 };
 const styles={
  html:"body{font-family:Arial,sans-serif;padding:20px;color:#222}h1{color:#c21d32}",
@@ -45,7 +45,15 @@ function renderCourseSelect(){$("courseSelect").innerHTML=keys.map(k=>'<option v
 function renderLessonList(){$("lessonList").innerHTML=courses[activeCourse].lessons.map((l,i)=>{const id=activeCourse+":"+i;return '<button class="lesson-item '+(i===activeLesson?"active ":"")+(done.has(id)?"done":"")+'" data-index="'+i+'">'+(i+1)+". "+l.title+'<small>'+(done.has(id)?"تکمیل‌شده":"برای مطالعه انتخاب کن")+'</small></button>';}).join("");document.querySelectorAll("[data-index]").forEach(b=>b.addEventListener("click",()=>{activeLesson=Number(b.dataset.index);renderLesson();}));}
 function renderLesson(){const c=courses[activeCourse],l=c.lessons[activeLesson];$("lessonCourse").textContent=c.name;$("lessonNumber").textContent="درس "+(activeLesson+1)+" از "+c.lessons.length;$("lessonTitle").textContent=l.title;$("lessonBody").innerHTML=l.body;$("lessonCode").textContent=l.code;$("prevLesson").disabled=activeLesson===0;$("nextLesson").disabled=activeLesson===c.lessons.length-1;$("completeLesson").textContent=done.has(activeCourse+":"+activeLesson)?"✓ این درس تکمیل شده":"علامت‌گذاری به‌عنوان تکمیل‌شده";$("lessonStatus").textContent="";renderLessonList();}
 function openCourse(k){activeCourse=k;activeLesson=0;$("courseSelect").value=k;renderLesson();$("classroom").scrollIntoView({behavior:"smooth"});}
-function renderPreview(){const html=activeTab==="html"?$("codeEditor").value:(activeTab==="css"?"<h1 class='title'>سلام NEXORA!</h1><p>این یک تمرین CSS است.</p><button>دکمه نمونه</button>":$("codeEditor").value);const css=activeTab==="css"?$("codeEditor").value:styles[activeTab];const js=activeTab==="js"?$("codeEditor").value:"";const safeJs=js.replace(/<\/script/gi,"<\\/script");const safeDoc='<!doctype html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body>'+(activeTab==="css"?"<h1 class='title'>سلام NEXORA!</h1><p>این یک تمرین CSS است.</p><button>دکمه نمونه</button>":html)+'<scr'+'ipt>'+safeJs+'</scr'+'ipt></body></html>';$("preview").srcdoc=safeDoc;}
+function renderPreview(){
+const defaultHtml=activeTab==="css"?"<h1 class='title'>سلام NEXORA!</h1><p>این یک تمرین CSS است.</p><button>دکمه نمونه</button>":(activeTab==="js"?"<h1 id='title'>سلام!</h1><button id='change'>تغییر متن</button>":"");
+const html=activeTab==="html"?$("codeEditor").value:defaultHtml;
+const css=activeTab==="css"?$("codeEditor").value:styles[activeTab];
+const js=activeTab==="js"?$("codeEditor").value:"";
+const safeJs=js.replace(/<\/script/gi,"<\\/script");
+const safeDoc='<!doctype html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body>'+html+'<scr'+'ipt>'+safeJs+'</scr'+'ipt></body></html>';
+$("preview").srcdoc=safeDoc;
+}
 function selectTab(tab){activeTab=tab;document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));$("codeEditor").value=samples[tab];}
 $("courseSelect").addEventListener("change",e=>openCourse(e.target.value));
 $("prevLesson").addEventListener("click",()=>{if(activeLesson>0){activeLesson--;renderLesson();}});
