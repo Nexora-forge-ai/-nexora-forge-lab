@@ -81,6 +81,7 @@ const samples={
  css:'<h1 class="title">سلام NEXORA!</h1>\n<p>این یک تمرین CSS است.</p>\n<button>دکمه نمونه</button>',
  js:'document.querySelector("#change").addEventListener("click",()=>{\n document.querySelector("#title").textContent="تو موفق شدی!";\n});'
 };
+const codeBuffers={...samples};
 const styles={
  html:"body{font-family:Arial,sans-serif;padding:20px;color:#222}h1{color:#c21d32}",
  css:"body{font-family:Arial,sans-serif;padding:20px;color:#222}.title{color:#c21d32;background:#fff0f1;padding:12px;border-radius:10px}button{padding:9px 14px;border:0;border-radius:8px;background:#c21d32;color:white}",
@@ -102,7 +103,7 @@ const safeJs=js.replace(/<\/script/gi,"<\\/script");
 const safeDoc='<!doctype html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body>'+html+'<scr'+'ipt>'+safeJs+'</scr'+'ipt></body></html>';
 $("preview").srcdoc=safeDoc;
 }
-function selectTab(tab){activeTab=tab;document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));$("codeEditor").value=samples[tab];}
+function selectTab(tab){codeBuffers[activeTab]=$("codeEditor").value;activeTab=tab;document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));$("codeEditor").value=codeBuffers[tab];}
 $("courseSelect").addEventListener("change",e=>openCourse(e.target.value));
 $("prevLesson").addEventListener("click",()=>{if(activeLesson>0){activeLesson--;renderLesson();}});
 $("nextLesson").addEventListener("click",()=>{if(activeLesson<courses[activeCourse].lessons.length-1){activeLesson++;renderLesson();}});
@@ -110,7 +111,8 @@ $("completeLesson").addEventListener("click",()=>{done.add(activeCourse+":"+acti
 $("copyExample").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(courses[activeCourse].lessons[activeLesson].code);$("lessonStatus").textContent="کد کپی شد.";}catch(e){$("lessonStatus").textContent="کپی خودکار در این مرورگر در دسترس نیست؛ کد را دستی انتخاب کن.";}});
 document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>selectTab(b.dataset.tab)));
 $("runCode").addEventListener("click",renderPreview);
-$("resetCode").addEventListener("click",()=>{selectTab(activeTab);renderPreview();});
+$("resetCode").addEventListener("click",()=>{codeBuffers[activeTab]=samples[activeTab];$("codeEditor").value=samples[activeTab];renderPreview();});
+$("clearAllCode").addEventListener("click",()=>{if(!confirm("همه کدهای آزمایشی HTML، CSS و JavaScript پاک شوند؟"))return;for(const tab of Object.keys(codeBuffers))codeBuffers[tab]="";$("codeEditor").value="";renderPreview();});
 $("menuBtn").addEventListener("click",()=>$("navLinks").classList.toggle("open"));
 document.querySelectorAll("#navLinks a").forEach(a=>a.addEventListener("click",()=>$("navLinks").classList.remove("open")));
 const questions=[
