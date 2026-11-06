@@ -146,11 +146,28 @@ $("menuBtn").addEventListener("click",()=>$("navLinks").classList.toggle("open")
 document.querySelectorAll("#navLinks a").forEach(a=>a.addEventListener("click",()=>$("navLinks").classList.remove("open")));
 const questions=[
  {q:"کدام تگ برای عنوان اصلی صفحه استفاده می‌شود؟",a:["<p>","<h1>","<img>"],correct:1,why:"h1 عنوان اصلی و مهم صفحه را مشخص می‌کند."},
+ {q:"برای ساخت پیوند در HTML از کدام تگ استفاده می‌شود؟",a:["<a>","<link>","<button>"],correct:0,why:"تگ a همراه ویژگی href یک پیوند ایجاد می‌کند."},
+ {q:"ویژگی alt در تصویر چه کاربردی دارد؟",a:["تغییر اندازه تصویر","متن جایگزین تصویر","تعیین رنگ تصویر"],correct:1,why:"alt توضیح متنی تصویر را برای دسترس‌پذیری و زمانی که تصویر بارگذاری نمی‌شود فراهم می‌کند."},
  {q:"کدام ویژگی در CSS رنگ متن را تعیین می‌کند؟",a:["font-size","background","color"],correct:2,why:"ویژگی color رنگ متن را تعیین می‌کند."},
- {q:"برای تعریف متغیری که دوباره مقداردهی نمی‌شود از کدام کلمه استفاده می‌کنیم؟",a:["const","repeat","style"],correct:0,why:"const برای متغیری است که دوباره به آن مقدار نسبت داده نمی‌شود."}
+ {q:"برای چیدمان انعطاف‌پذیر یک‌بعدی معمولاً از چه چیزی استفاده می‌کنیم؟",a:["display: flex","font-style","text-align"],correct:0,why:"Flexbox برای چیدمان انعطاف‌پذیر در یک محور مناسب است."},
+ {q:"کدام ابزار CSS برای اعمال سبک در اندازه‌های مختلف صفحه استفاده می‌شود؟",a:["@media","@font-face","@import"],correct:0,why:"Media Query امکان تعریف سبک‌های وابسته به اندازه صفحه یا ویژگی‌های دستگاه را می‌دهد."},
+ {q:"برای تعریف متغیری که دوباره مقداردهی نمی‌شود از کدام کلمه استفاده می‌کنیم؟",a:["const","repeat","style"],correct:0,why:"const برای متغیری است که دوباره به آن مقدار نسبت داده نمی‌شود."},
+ {q:"برای شنیدن رویداد کلیک در JavaScript از کدام متد استفاده می‌شود؟",a:["querySelector","addEventListener","innerHTML"],correct:1,why:"addEventListener شنونده رویداد را به عنصر متصل می‌کند."},
+ {q:"اندیس اولین عضو آرایه در JavaScript چند است؟",a:["۱","۰","-۱"],correct:1,why:"اندیس آرایه‌ها در JavaScript از صفر شروع می‌شود."}
 ];
-let qi=0,score=0,answered=false;
-function renderQuiz(){const q=questions[qi];$("quizCount").textContent="سؤال "+(qi+1)+" از "+questions.length;$("quizQuestion").textContent=q.q;$("quizOptions").innerHTML=q.a.map((a,i)=>'<button class="quiz-option" data-answer="'+i+'">'+a.replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</button>').join("");$("quizFeedback").textContent="";$("nextQuestion").disabled=true;$("nextQuestion").textContent=qi===questions.length-1?"دیدن نتیجه":"سؤال بعدی";answered=false;document.querySelectorAll("[data-answer]").forEach(b=>b.addEventListener("click",()=>{if(answered)return;answered=true;const n=Number(b.dataset.answer),correct=n===q.correct;if(correct)score++;b.classList.add(correct?"correct":"wrong");document.querySelectorAll("[data-answer]")[q.correct].classList.add("correct");$("quizFeedback").textContent=(correct?"درست است. ":"پاسخ درست: ")+q.why;$("quizScore").textContent="امتیاز: "+score;$("nextQuestion").disabled=false;}));}
-$("nextQuestion").addEventListener("click",()=>{if(qi<questions.length-1){qi++;renderQuiz();}else{$("quizQuestion").textContent="آزمون تمام شد؛ امتیاز تو "+score+" از "+questions.length+" است.";$("quizOptions").innerHTML="";$("quizFeedback").textContent="برای تمرین دوباره صفحه را تازه‌سازی کن.";$("nextQuestion").disabled=true;}});
+let qi=0,score=0,answered=false,quizFinished=false;
+function renderQuiz(){quizFinished=false;const q=questions[qi];$("quizCount").textContent="سؤال "+(qi+1)+" از "+questions.length;$("quizQuestion").textContent=q.q;$("quizOptions").innerHTML=q.a.map((a,i)=>'<button class="quiz-option" data-answer="'+i+'">'+a.replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</button>').join("");$("quizFeedback").textContent="";$("nextQuestion").disabled=true;$("nextQuestion").textContent=qi===questions.length-1?"دیدن نتیجه":"سؤال بعدی";answered=false;document.querySelectorAll("[data-answer]").forEach(b=>b.addEventListener("click",()=>{if(answered)return;answered=true;const n=Number(b.dataset.answer),correct=n===q.correct;if(correct)score++;b.classList.add(correct?"correct":"wrong");document.querySelectorAll("[data-answer]")[q.correct].classList.add("correct");$("quizFeedback").textContent=(correct?"درست است. ":"پاسخ درست: ")+q.why;$("quizScore").textContent="امتیاز: "+score;$("nextQuestion").disabled=false;}));}
+$("nextQuestion").addEventListener("click",()=>{
+  if(quizFinished){qi=0;score=0;$("quizScore").textContent="";renderQuiz();return;}
+  if(qi<questions.length-1){qi++;renderQuiz();}
+  else{
+    quizFinished=true;
+    $("quizQuestion").textContent="آزمون تمام شد؛ امتیاز تو "+score+" از "+questions.length+" است.";
+    $("quizOptions").innerHTML="";
+    $("quizFeedback").textContent=score===questions.length?"عالی! به همه سؤال‌ها درست پاسخ دادی.": "برای بهتر شدن، درس‌ها را مرور کن و دوباره آزمون بده.";
+    $("nextQuestion").disabled=false;
+    $("nextQuestion").textContent="شروع دوباره آزمون";
+  }
+});
 $("year").textContent=new Date().getFullYear();
 renderCourses();renderCourseSelect();updateProgress();renderLesson();selectTab("html");renderPreview();renderQuiz();
