@@ -138,7 +138,7 @@ $("resetCode").addEventListener("click",()=>{codeBuffers[activeTab]=samples[acti
 $("clearAllCode").addEventListener("click",()=>{
   for(const tab of Object.keys(codeBuffers))codeBuffers[tab]="";
   $("codeEditor").value="";
-  try{localStorage.removeItem(codeStorageKey);}catch(error){}
+  saveCodeBuffers();
   renderPreview();
   $("codeStatus").textContent="همه کدهای آزمایشی HTML، CSS و JavaScript حذف شدند.";
 });
