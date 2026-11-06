@@ -93,3 +93,7 @@ pre{
 
 .btn.danger{background:#321219;border-color:#8e2935;color:#ffb4ba}.btn.danger:hover{background:#4a1720;border-color:var(--red)}
 @media(max-width:560px){#clearAllCode{flex:1 1 100%}}
+
+
+/* Lesson practice tasks */
+.lesson-exercise{margin-top:16px;padding:13px 15px;border:1px solid #71303a;border-right:3px solid var(--red);border-radius:12px;background:#211117;color:#f4dce0}.lesson-exercise strong{display:block;color:#ff858d;font-size:13px}.lesson-exercise p{margin:5px 0 0;font-size:14px;color:#eee}
