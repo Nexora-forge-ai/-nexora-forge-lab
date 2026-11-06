@@ -81,7 +81,22 @@ const samples={
  css:'<h1 class="title">سلام NEXORA!</h1>\n<p>این یک تمرین CSS است.</p>\n<button>دکمه نمونه</button>',
  js:'document.querySelector("#change").addEventListener("click",()=>{\n document.querySelector("#title").textContent="تو موفق شدی!";\n});'
 };
-const codeBuffers={...samples};
+const codeStorageKey="nexoraAcademyCodeV1";
+function loadCodeBuffers(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(codeStorageKey)||"null");
+    return saved&&typeof saved==="object"?{
+      html:typeof saved.html==="string"?saved.html:samples.html,
+      css:typeof saved.css==="string"?saved.css:samples.css,
+      js:typeof saved.js==="string"?saved.js:samples.js
+    }:{...samples};
+  }catch(error){return {...samples};}
+}
+const codeBuffers=loadCodeBuffers();
+function saveCodeBuffers(){
+  try{localStorage.setItem(codeStorageKey,JSON.stringify(codeBuffers));}
+  catch(error){const status=$("codeStatus");if(status)status.textContent="ذخیره خودکار در این مرورگر در دسترس نیست.";}
+}
 const styles={
  html:"body{font-family:Arial,sans-serif;padding:20px;color:#222}h1{color:#c21d32}",
  css:"body{font-family:Arial,sans-serif;padding:20px;color:#222}.title{color:#c21d32;background:#fff0f1;padding:12px;border-radius:10px}button{padding:9px 14px;border:0;border-radius:8px;background:#c21d32;color:white}",
@@ -95,7 +110,8 @@ function renderLessonList(){$("lessonList").innerHTML=courses[activeCourse].less
 function renderLesson(){const c=courses[activeCourse],l=c.lessons[activeLesson];$("lessonCourse").textContent=c.name;$("lessonNumber").textContent="درس "+(activeLesson+1)+" از "+c.lessons.length;$("lessonTitle").textContent=l.title;$("lessonBody").innerHTML=l.body;$("lessonCode").textContent=l.code;$("prevLesson").disabled=activeLesson===0;$("nextLesson").disabled=activeLesson===c.lessons.length-1;$("completeLesson").textContent=done.has(activeCourse+":"+activeLesson)?"✓ این درس تکمیل شده":"علامت‌گذاری به‌عنوان تکمیل‌شده";$("lessonStatus").textContent="";renderLessonList();}
 function openCourse(k){activeCourse=k;activeLesson=0;$("courseSelect").value=k;renderLesson();$("classroom").scrollIntoView({behavior:"smooth"});}
 function renderPreview(){
-const defaultHtml=activeTab==="css"?"<h1 class='title'>سلام NEXORA!</h1><p>این یک تمرین CSS است.</p><button>دکمه نمونه</button>":(activeTab==="js"?"<h1 id='title'>سلام!</h1><button id='change'>تغییر متن</button>":"");
+const hasAnyCode=Object.values(codeBuffers).some(code=>code.trim().length>0);
+const defaultHtml=!hasAnyCode?"":(activeTab==="css"?"<h1 class='title'>سلام NEXORA!</h1><p>این یک تمرین CSS است.</p><button>دکمه نمونه</button>":(activeTab==="js"?"<h1 id='title'>سلام!</h1><button id='change'>تغییر متن</button>":""));
 const html=activeTab==="html"?$("codeEditor").value:defaultHtml;
 const css=activeTab==="css"?$("codeEditor").value:styles[activeTab];
 const js=activeTab==="js"?$("codeEditor").value:"";
@@ -103,16 +119,29 @@ const safeJs=js.replace(/<\/script/gi,"<\\/script");
 const safeDoc='<!doctype html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body>'+html+'<scr'+'ipt>'+safeJs+'</scr'+'ipt></body></html>';
 $("preview").srcdoc=safeDoc;
 }
-function selectTab(tab){codeBuffers[activeTab]=$("codeEditor").value;activeTab=tab;document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));$("codeEditor").value=codeBuffers[tab];}
+function selectTab(tab){
+  if(tab!==activeTab){codeBuffers[activeTab]=$("codeEditor").value;saveCodeBuffers();}
+  activeTab=tab;
+  document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
+  $("codeEditor").value=codeBuffers[tab];
+  renderPreview();
+}
 $("courseSelect").addEventListener("change",e=>openCourse(e.target.value));
 $("prevLesson").addEventListener("click",()=>{if(activeLesson>0){activeLesson--;renderLesson();}});
 $("nextLesson").addEventListener("click",()=>{if(activeLesson<courses[activeCourse].lessons.length-1){activeLesson++;renderLesson();}});
 $("completeLesson").addEventListener("click",()=>{done.add(activeCourse+":"+activeLesson);saveDone();renderLesson();$("lessonStatus").textContent="پیشرفتت ذخیره شد." ;});
 $("copyExample").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(courses[activeCourse].lessons[activeLesson].code);$("lessonStatus").textContent="کد کپی شد.";}catch(e){$("lessonStatus").textContent="کپی خودکار در این مرورگر در دسترس نیست؛ کد را دستی انتخاب کن.";}});
 document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>selectTab(b.dataset.tab)));
-$("runCode").addEventListener("click",renderPreview);
-$("resetCode").addEventListener("click",()=>{codeBuffers[activeTab]=samples[activeTab];$("codeEditor").value=samples[activeTab];renderPreview();});
-$("clearAllCode").addEventListener("click",()=>{if(!confirm("همه کدهای آزمایشی HTML، CSS و JavaScript پاک شوند؟"))return;for(const tab of Object.keys(codeBuffers))codeBuffers[tab]="";$("codeEditor").value="";renderPreview();});
+$("runCode").addEventListener("click",()=>{codeBuffers[activeTab]=$("codeEditor").value;saveCodeBuffers();renderPreview();$("codeStatus").textContent="کد اجرا شد.";});
+$("codeEditor").addEventListener("input",()=>{codeBuffers[activeTab]=$("codeEditor").value;saveCodeBuffers();$("codeStatus").textContent="تغییرات به‌صورت خودکار ذخیره شد.";});
+$("resetCode").addEventListener("click",()=>{codeBuffers[activeTab]=samples[activeTab];$("codeEditor").value=samples[activeTab];saveCodeBuffers();renderPreview();$("codeStatus").textContent="نمونه کد این زبانه بازنشانی شد.";});
+$("clearAllCode").addEventListener("click",()=>{
+  for(const tab of Object.keys(codeBuffers))codeBuffers[tab]="";
+  $("codeEditor").value="";
+  try{localStorage.removeItem(codeStorageKey);}catch(error){}
+  renderPreview();
+  $("codeStatus").textContent="همه کدهای آزمایشی HTML، CSS و JavaScript حذف شدند.";
+});
 $("menuBtn").addEventListener("click",()=>$("navLinks").classList.toggle("open"));
 document.querySelectorAll("#navLinks a").forEach(a=>a.addEventListener("click",()=>$("navLinks").classList.remove("open")));
 const questions=[
