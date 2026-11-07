@@ -87,9 +87,13 @@
       const pct = Math.round(count / course.count * 100);
       return '<div class="student-course-row"><div class="student-course-title"><strong>'+course.name+'</strong><span>'+count+' از '+course.count+' درس</span></div><div class="student-course-track"><span style="width:'+pct+'%"></span></div></div>';
     }).join("");
-    const { data, error } = await client.from("student_quiz_attempts").select("score,total,created_at").eq("user_id", currentUser.id).order("created_at", {ascending:false}).limit(5);
+    const [{ data, error }, countResult] = await Promise.all([
+      client.from("student_quiz_attempts").select("score,total,created_at").eq("user_id", currentUser.id).order("created_at", {ascending:false}).limit(5),
+      client.from("student_quiz_attempts").select("id", {count:"exact", head:true}).eq("user_id", currentUser.id)
+    ]);
     if (error) throw error;
-    $("studentQuizCount").textContent = (data || []).length.toLocaleString("fa-IR");
+    if (countResult.error) throw countResult.error;
+    $("studentQuizCount").textContent = (countResult.count || 0).toLocaleString("fa-IR");
     $("studentQuizHistory").innerHTML = data && data.length ? data.map(item =>
       '<div class="student-quiz-row">امتیاز: <strong>'+item.score+' از '+item.total+'</strong> <span>· '+new Date(item.created_at).toLocaleDateString("fa-IR")+'</span></div>'
     ).join("") : "هنوز نتیجه‌ای ثبت نشده است.";
@@ -116,7 +120,7 @@
       panel.hidden = true;
     }
   }
-  $("authOpenBtn").addEventListener("click", () => openModal("login"));
+  $("authOpenBtn").onclick = () => openModal("login");
   $("showLogin").addEventListener("click", () => showTab("login"));
   $("showSignup").addEventListener("click", () => showTab("signup"));
   document.querySelectorAll("[data-auth-close]").forEach(el => el.addEventListener("click", closeModal));
@@ -157,8 +161,8 @@
         closeModal();
         await applySession(data.session);
       } else {
-        setMessage("حساب ساخته شد. ایمیلت را باز کن و پیوند تأیید را بزن؛ سپس وارد شو.", true);
         showTab("login");
+        setMessage("حساب ساخته شد. ایمیلت را باز کن و پیوند تأیید را بزن؛ سپس وارد شو.", true);
       }
     } catch (error) {
       setMessage(error.message || "ثبت‌نام انجام نشد.");
