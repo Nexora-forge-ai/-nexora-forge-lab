@@ -139,3 +139,6 @@ pre{
 
 /* Keep account access visible on the home header, including mobile */
 @media(max-width:560px){.nav{flex-wrap:nowrap}.auth-open{width:auto;flex:0 0 auto;margin:0;padding:6px 9px;font-size:11px}.menu-btn{order:2}.auth-open{order:3}.brand{order:1;min-width:0}.links{order:4}}
+
+/* Academy CMS administration */
+.cms-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.cms-panel{margin:12px 0}.cms-row{margin:12px 0;padding:14px}.cms-row p{margin:8px 0;color:var(--muted)}.cms-panel[hidden]{display:none!important}.cms-panel .auth-form{max-width:760px}.cms-panel textarea{width:100%;min-width:0;padding:11px;border:1px solid #393945;border-radius:9px;background:#0d0d13;color:#fff;font:inherit}.cms-panel input[type=checkbox]{width:auto;min-height:auto;display:inline-block}
