@@ -22,6 +22,38 @@ async function start(){
  for(const e of [pErr,prErr,cErr,lErr,qErr,qcErr,aErr,rErr])if(e)throw e;
  const done=(progress||[]).map(x=>x.lesson_id),total=(lessonRows||[]).length;
  $("welcome").textContent="خوش آمدی، "+(profile?.display_name||user.user_metadata?.display_name||user.email||"دانش‌آموز");
+ const avatarPath=profile?.avatar_path;
+ if(avatarPath){const {data}=db.storage.from("academy-avatars").getPublicUrl(avatarPath);$("avatarPreview").src=data.publicUrl;$("avatarPreview").hidden=false;$("avatarInitials").hidden=true;$("removeAvatar").hidden=false;}
+ else{$("avatarPreview").hidden=true;$("avatarInitials").hidden=false;$("removeAvatar").hidden=true;}
+ const avatarInput=$("avatarInput");
+ avatarInput.addEventListener("change",async()=>{
+  const file=avatarInput.files?.[0];if(!file)return;
+  const status=$("avatarStatus");
+  try{
+   if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw Error("فقط JPG، PNG یا WebP مجاز است.");
+   if(file.size>2*1024*1024)throw Error("حجم تصویر نباید بیشتر از ۲ مگابایت باشد.");
+   status.textContent="در حال بارگذاری تصویر...";
+   const ext=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg";
+   const path=user.id+"/avatar."+ext;
+   const {error:uploadError}=await db.storage.from("academy-avatars").upload(path,file,{upsert:true,contentType:file.type});
+   if(uploadError)throw uploadError;
+   const {error:updateError}=await db.from("academy_profiles").update({avatar_path:path}).eq("user_id",user.id);
+   if(updateError)throw updateError;
+   const {data:publicData}=db.storage.from("academy-avatars").getPublicUrl(path);
+   $("avatarPreview").src=publicData.publicUrl+"?v="+Date.now();$("avatarPreview").hidden=false;$("avatarInitials").hidden=true;$("removeAvatar").hidden=false;
+   status.textContent="عکس پروفایل ذخیره شد.";
+  }catch(e){status.textContent="بارگذاری عکس ناموفق بود: "+e.message;}
+  finally{avatarInput.value="";}
+ });
+ $("removeAvatar").addEventListener("click",async()=>{
+  if(!profile?.avatar_path)return;
+  const status=$("avatarStatus");status.textContent="در حال حذف تصویر...";
+  try{
+   const {error:removeError}=await db.storage.from("academy-avatars").remove([profile.avatar_path]);if(removeError)throw removeError;
+   const {error:updateError}=await db.from("academy_profiles").update({avatar_path:null}).eq("user_id",user.id);if(updateError)throw updateError;
+   $("avatarPreview").hidden=true;$("avatarInitials").hidden=false;$("removeAvatar").hidden=true;status.textContent="عکس پروفایل حذف شد.";
+  }catch(e){status.textContent="حذف عکس ناموفق بود: "+e.message;}
+ });
  $("doneCount").textContent=done.length.toLocaleString("fa-IR");
  $("percent").textContent=(total?Math.round(done.length/total*100):0).toLocaleString("fa-IR")+"٪";
  $("quizCount").textContent=(count||0).toLocaleString("fa-IR");
