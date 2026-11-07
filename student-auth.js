@@ -79,6 +79,13 @@ $("loginForm").addEventListener("submit",async e=>{
  try{const {data,error}=await db.auth.signInWithPassword({email:$("loginEmail").value.trim(),password:$("loginPassword").value});if(error)throw error;closeModal();await applySession(data.session);location.href="student.html";}
  catch(err){setMessage(err.message||"ورود انجام نشد.");}finally{setBusy(false);}
 });
+$("studentForgotPassword").addEventListener("click",async()=>{
+ const email=$("loginEmail").value.trim();
+ if(!email){setMessage("ابتدا ایمیل حساب را وارد کن.");$("loginEmail").focus();return;}
+ setMessage("در حال ارسال لینک بازیابی...");
+ try{const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:new URL("student.html",location.href).href});if(error)throw error;setMessage("اگر حسابی با این ایمیل وجود داشته باشد، لینک بازیابی ارسال می‌شود.",true);}
+ catch(err){setMessage(err.message||"ارسال لینک بازیابی انجام نشد.");}
+});
 $("signupForm").addEventListener("submit",async e=>{
  e.preventDefault();if(busy)return;setBusy(true);setMessage("در حال ساخت حساب...");
  try{
