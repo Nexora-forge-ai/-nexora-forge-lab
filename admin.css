@@ -162,3 +162,7 @@
 .admin-login-hint{font-size:12px!important;color:#888!important;margin-top:20px}
 #adminLogout[hidden]{display:none}
 @media(max-width:600px){.admin-login-card{margin:22px 0;padding:22px 17px;border-radius:15px}}
+
+#studentSearch{min-width:220px;max-width:360px;padding:10px 12px;border:1px solid #3b3440;border-radius:9px;background:#17151d;color:#f5f3f6;font:inherit;font-size:13px}
+#studentSearch:focus{outline:none;border-color:#c63748;box-shadow:0 0 0 3px #e52b3b18}
+@media(max-width:520px){#studentSearch{width:100%;max-width:none}}
