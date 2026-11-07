@@ -25,7 +25,7 @@ async function syncProgress(){
  ]);
  if(error)throw error;if(catalogError)throw catalogError;
  const validIds=new Set((catalog||[]).map(x=>x.id));
- const merged=[...new Set([...(data||[]).map(x=>x.lesson_id),...local.filter(id=>validIds.has(id))])];
+ const merged=[...new Set([...(data||[]).map(x=>x.lesson_id).filter(id=>validIds.has(id)),...local.filter(id=>validIds.has(id))])];
  if(merged.length){
   const rows=merged.map(lesson_id=>({user_id:currentUser.id,lesson_id,status:"completed",completed_at:new Date().toISOString()}));
   const {error:saveError}=await db.from("academy_lesson_progress").upsert(rows,{onConflict:"user_id,lesson_id"});
@@ -44,7 +44,8 @@ async function renderDashboard(){
   db.from("academy_quiz_attempts").select("id",{count:"exact",head:true}).eq("user_id",currentUser.id)
  ]);
  for(const e of [profileError,progressError,lessonsError,coursesError,quizError])if(e)throw e;
- const done=(progress||[]).map(x=>x.lesson_id),total=(lessons||[]).length;
+ const validLessonIds=new Set((lessons||[]).map(x=>x.id));
+ const done=(progress||[]).map(x=>x.lesson_id).filter(id=>validLessonIds.has(id)),total=validLessonIds.size;
  $("studentWelcome").textContent="خوش آمدی، "+(profile?.display_name||currentUser.user_metadata?.display_name||currentUser.email||"دانش‌آموز");
  $("studentDoneCount").textContent=done.length.toLocaleString("fa-IR");
  $("studentPercent").textContent=(total?Math.round(done.length/total*100):0).toLocaleString("fa-IR")+"٪";
