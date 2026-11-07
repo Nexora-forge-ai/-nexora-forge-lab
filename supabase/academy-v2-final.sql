@@ -349,9 +349,22 @@ for all to authenticated using (public.academy_is_admin()) with check (public.ac
 create policy "progress_read_self_or_admin" on public.academy_lesson_progress
 for select to authenticated using (user_id=(select auth.uid()) or public.academy_is_admin());
 create policy "progress_insert_self" on public.academy_lesson_progress
-for insert to authenticated with check (user_id=(select auth.uid()));
+for insert to authenticated with check (
+  user_id=(select auth.uid()) and exists (
+    select 1 from public.academy_lessons l
+    join public.academy_courses c on c.id=l.course_id
+    where l.id=lesson_id and l.status='published' and c.status='published'
+  )
+);
 create policy "progress_update_self" on public.academy_lesson_progress
-for update to authenticated using (user_id=(select auth.uid())) with check (user_id=(select auth.uid()));
+for update to authenticated using (user_id=(select auth.uid()))
+with check (
+  user_id=(select auth.uid()) and exists (
+    select 1 from public.academy_lessons l
+    join public.academy_courses c on c.id=l.course_id
+    where l.id=lesson_id and l.status='published' and c.status='published'
+  )
+);
 create policy "progress_admin_all" on public.academy_lesson_progress
 for all to authenticated using (public.academy_is_admin()) with check (public.academy_is_admin());
 
@@ -422,8 +435,10 @@ grant select, update on public.academy_profiles to authenticated;
 grant select on public.academy_user_roles to authenticated;
 grant insert, select, update on public.academy_lesson_progress to authenticated;
 grant select on public.academy_quiz_attempts, public.academy_quiz_answers to authenticated;
-grant select, insert, update, delete on public.academy_languages, public.academy_levels, public.academy_courses,
-  public.academy_lessons, public.academy_lesson_attachments, public.academy_quizzes,
+-- Catalog records are archived, not hard-deleted, so student history remains intact.
+grant select, insert, update on public.academy_languages, public.academy_levels, public.academy_courses,
+  public.academy_lessons to authenticated;
+grant select, insert, update, delete on public.academy_lesson_attachments, public.academy_quizzes,
   public.academy_quiz_questions, public.academy_quiz_options, public.academy_quiz_correct_answers,
   public.academy_ads, public.academy_site_settings to authenticated;
 grant select, insert on public.academy_activity_logs to authenticated;
