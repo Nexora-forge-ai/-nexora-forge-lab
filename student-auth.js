@@ -16,6 +16,7 @@
   });
   let currentUser = null;
   let busy = false;
+  const safeUrl = value => { try { const u = new URL(value); return ["http:","https:"].includes(u.protocol) ? u.href : ""; } catch (_) { return ""; } };
   const safeText = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
   const getLocalDone = () => {
     try { const value = JSON.parse(localStorage.getItem("nexoraAcademyDone") || "[]"); return Array.isArray(value) ? value.filter(x => typeof x === "string") : []; }
@@ -191,6 +192,6 @@
   if (homeAds) client.from("academy_ads").select("title,body,image_url,target_url").in("placement",["home","both"]).then(({data,error}) => {
     if (error || !data || !data.length) { homeAds.hidden = true; return; }
     homeAds.hidden = false;
-    homeAds.innerHTML = data.map(ad => '<article class="student-box" style="margin:10px 0"><strong>'+safeText(ad.title)+'</strong><p>'+safeText(ad.body)+'</p>'+(ad.image_url?'<img src="'+safeText(ad.image_url)+'" alt="" style="max-width:100%;max-height:180px;border-radius:10px">':"")+(ad.target_url?'<p><a class="btn small" href="'+safeText(ad.target_url)+'" target="_blank" rel="noopener noreferrer">مشاهده</a></p>':"")+'</article>').join("");
+    homeAds.innerHTML = data.map(ad => '<article class="student-box" style="margin:10px 0"><strong>'+safeText(ad.title)+'</strong><p>'+safeText(ad.body)+'</p>'+(safeUrl(ad.image_url)?'<img src="'+safeText(safeUrl(ad.image_url))+'" alt="" style="max-width:100%;max-height:180px;border-radius:10px">':"")+(safeUrl(ad.target_url)?'<p><a class="btn small" href="'+safeText(safeUrl(ad.target_url))+'" target="_blank" rel="noopener noreferrer">مشاهده</a></p>':"")+'</article>').join("");
   });
 })();
