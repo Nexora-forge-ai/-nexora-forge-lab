@@ -7,6 +7,7 @@ const say=(s,ok=false)=>{$("adminStatus").textContent=s;$("adminStatus").classLi
 let courses=[],lessons=[],ads=[],allowed=false;
 const urlSafe=s=>{if(!s)return null;const u=new URL(s);if(!["http:","https:"].includes(u.protocol))throw Error("فقط نشانی http یا https مجاز است.");return u.href;};
 function showLogin(message="برای ورود به مرکز مدیریت، ایمیل و رمز عبور مدیر را وارد کن.") {
+  $("adminLogout").hidden=true;
   $("adminLoginBox").hidden=false;
   $("adminWorkspace").hidden=true;
   $("adminIdentity").textContent="ورود مستقل مدیر";
