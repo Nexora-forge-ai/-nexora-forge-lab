@@ -46,7 +46,15 @@ $("lessonReset").onclick=resetLesson;
 function renderStudents(){
  const q=$("studentSearch").value.trim().toLowerCase();
  const filtered=students.filter(s=>[s.display_name,s.email,s.user_id].some(v=>String(v||"").toLowerCase().includes(q)));
- $("studentListAdmin").innerHTML=filtered.length?filtered.map(s=>'<article class="student-box cms-row"><strong>'+esc(s.display_name||s.email||"دانش‌آموز")+'</strong><p>'+esc(s.email||"بدون ایمیل")+' · ثبت‌نام: '+new Date(s.created_at).toLocaleDateString("fa-IR")+' · درس تکمیل‌شده: '+s.completed_lessons+' · آزمون: '+s.quiz_attempts+'</p><small>شناسه حساب: '+esc(s.user_id)+'</small></article>').join(""):(students.length?"دانش‌آموزی با این جستجو پیدا نشد.":"هنوز دانش‌آموزی ثبت‌نام نکرده است.");
+ $("studentListAdmin").innerHTML=filtered.length?filtered.map(s=>'<article class="student-box cms-row"><strong>'+esc(s.display_name||s.email||"دانش‌آموز")+'</strong><p>'+esc(s.email||"بدون ایمیل")+' · ثبت‌نام: '+new Date(s.created_at).toLocaleDateString("fa-IR")+' · درس تکمیل‌شده: '+s.completed_lessons+' · آزمون: '+s.quiz_attempts+'</p><small>شناسه حساب: '+esc(s.user_id)+'</small><div class="actions">'+(s.email?'<button class="btn small" data-reset-student="'+esc(s.email)+'">ارسال لینک بازیابی رمز</button>':"")+'</div></article>').join(""):(students.length?"دانش‌آموزی با این جستجو پیدا نشد.":"هنوز دانش‌آموزی ثبت‌نام نکرده است.");
+ document.querySelectorAll("[data-reset-student]").forEach(b=>b.onclick=async()=>{
+  const email=b.dataset.resetStudent;
+  if(!confirm("لینک بازیابی رمز برای "+email+" ارسال شود؟"))return;
+  b.disabled=true;
+  try{const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:new URL("student.html",location.href).href});if(error)throw error;say("در صورت فعال بودن ایمیل، لینک بازیابی برای دانش‌آموز ارسال شد.",true);}
+  catch(e){say("ارسال لینک بازیابی انجام نشد: "+e.message);}
+  finally{b.disabled=false;}
+ });
 }
 async function loadStudents(){const {data,error}=await db.rpc("academy_admin_student_overview");if(error)throw error;students=data||[];renderStudents();}
 $("studentSearch").addEventListener("input",renderStudents);
