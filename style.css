@@ -136,3 +136,6 @@ pre{
 @media(max-width:560px){.auth-open{width:100%;margin:4px 0 0}.student-panel-head{flex-direction:column}}
 
 .auth-form[hidden]{display:none!important}
+
+/* Keep account access visible on the home header, including mobile */
+@media(max-width:560px){.nav{flex-wrap:nowrap}.auth-open{width:auto;flex:0 0 auto;margin:0;padding:6px 9px;font-size:11px}.menu-btn{order:2}.auth-open{order:3}.brand{order:1;min-width:0}.links{order:4}}
