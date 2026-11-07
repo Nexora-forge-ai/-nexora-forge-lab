@@ -48,6 +48,7 @@
       <div class="stats"><div class="stat"><strong>۳</strong><small>دوره پایه</small></div><div class="stat"><strong id="lessonCount">۵۸</strong><small>درس آموزشی</small></div><div class="stat"><strong>۱</strong><small>محیط تمرین عملی</small></div></div>
     </div>
   </section>
+  <section class="section" id="homeAds" hidden><div class="wrap"><div class="section-head"><div><h2>تبلیغات و اطلاعیه‌ها</h2><p class="sub">پیام‌های منتشرشده از مدیریت آکادمی</p></div></div></div></section>
   <section class="section" id="courses"><div class="wrap">
     <div class="section-head"><div><h2>دوره‌های آموزشی</h2><p class="sub">از ساختار صفحه تا برنامه‌نویسی تعاملی</p></div><span class="tag">مسیر پیشنهادی مبتدی‌ها</span></div>
     <div class="course-grid" id="courseGrid"></div>
@@ -97,7 +98,7 @@
       <form id="signupForm" class="auth-form" hidden>
         <label for="signupName">نام نمایشی</label><input id="signupName" type="text" autocomplete="name" maxlength="60" required placeholder="نام شما">
         <label for="signupEmail">ایمیل</label><input id="signupEmail" type="email" autocomplete="email" required placeholder="name@example.com">
-        <label for="signupPassword">رمز عبور</label><input id="signupPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="حداقل ۸ نویسه">
+        <label for="signupPassword">رمز عبور</label><input id="signupPassword" type="password" autocomplete="new-password" minlength="10" required placeholder="حداقل ۱۰ نویسه، شامل حرف و عدد"><label for="signupPasswordConfirm">تکرار رمز عبور</label><input id="signupPasswordConfirm" type="password" autocomplete="new-password" minlength="10" required placeholder="رمز را دوباره وارد کن">
         <button class="btn primary" type="submit">ساخت حساب</button>
       </form>
       <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
