@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const URL="https://ufranjjvhmsrkoxtlqcl.supabase.co",KEY="sb_publishable_PiggBtDvCsSOwiT62J21Ag_fJA7M_v_";
+const URL="https://vfatmvmgtgpmnxqbgszm.supabase.co",KEY="sb_publishable_PiggBtDvCsSOwiT62J21Ag_fJA7M_v_";
 const db=window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=id=>document.getElementById(id),esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const say=(s,ok=false)=>{$("adminStatus").textContent=s;$("adminStatus").classList.toggle("success",ok)};
