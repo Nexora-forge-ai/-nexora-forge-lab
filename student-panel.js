@@ -25,7 +25,7 @@ async function start(){
  $("welcome").textContent="خوش آمدی، "+(profile?.display_name||user.user_metadata?.display_name||user.email||"دانش‌آموز");
  let currentAvatarPath=profile?.avatar_path||null;
  const avatarPath=currentAvatarPath;
- if(avatarPath){const {data}=db.storage.from("academy-avatars").getPublicUrl(avatarPath);$("avatarPreview").src=data.publicUrl;$("avatarPreview").hidden=false;$("avatarInitials").hidden=true;$("removeAvatar").hidden=false;}
+ if(avatarPath){const {data,error}=await db.storage.from("academy-avatars").createSignedUrl(avatarPath,3600);if(error)throw error;$("avatarPreview").src=data.signedUrl;$("avatarPreview").hidden=false;$("avatarInitials").hidden=true;$("removeAvatar").hidden=false;}
  else{$("avatarPreview").hidden=true;$("avatarInitials").hidden=false;$("removeAvatar").hidden=true;}
  const avatarInput=$("avatarInput");
  avatarInput.addEventListener("change",async()=>{
@@ -44,8 +44,8 @@ async function start(){
    if(updateError)throw updateError;
    currentAvatarPath=path;
    if(previousPath&&previousPath!==path)await db.storage.from("academy-avatars").remove([previousPath]);
-   const {data:publicData}=db.storage.from("academy-avatars").getPublicUrl(path);
-   $("avatarPreview").src=publicData.publicUrl+"?v="+Date.now();$("avatarPreview").hidden=false;$("avatarInitials").hidden=true;$("removeAvatar").hidden=false;
+   const {data:privateData,error:signedError}=await db.storage.from("academy-avatars").createSignedUrl(path,3600);if(signedError)throw signedError;
+   $("avatarPreview").src=privateData.signedUrl;$("avatarPreview").hidden=false;$("avatarInitials").hidden=true;$("removeAvatar").hidden=false;
    status.textContent="عکس پروفایل ذخیره شد.";
   }catch(e){status.textContent="بارگذاری عکس ناموفق بود: "+e.message;}
   finally{avatarInput.value="";}
