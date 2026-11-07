@@ -1,5 +1,5 @@
 -- NEXORA FORGE ACADEMY CMS
--- Run once in Supabase SQL Editor for project ufranjjvhmsrkoxtlqcl.
+-- Run once in Supabase SQL Editor for project vfatmvmgtgpmnxqbgszm.
 create table if not exists public.academy_courses (
  id text primary key,
  title text not null check (char_length(title) between 2 and 120),
