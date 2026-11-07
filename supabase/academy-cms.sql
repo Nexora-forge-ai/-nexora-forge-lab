@@ -7,6 +7,7 @@ create table if not exists public.academy_courses (
  level text not null default 'مقدماتی',
  sort_order int not null default 0,
  is_published boolean not null default true,
+ is_cms_managed boolean not null default false,
  created_at timestamptz not null default now(),
  updated_at timestamptz not null default now()
 );
@@ -22,6 +23,8 @@ create table if not exists public.academy_lessons (
  created_at timestamptz not null default now(),
  updated_at timestamptz not null default now()
 );
+alter table public.academy_courses add column if not exists is_cms_managed boolean not null default false;
+alter table public.academy_lessons add column if not exists is_cms_managed boolean not null default false;
 create index if not exists academy_lessons_course_order_idx on public.academy_lessons(course_id,sort_order);
 alter table public.academy_courses enable row level security;
 alter table public.academy_lessons enable row level security;
