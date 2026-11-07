@@ -7,7 +7,7 @@
 <meta name="description" content="پنل مدیریت آکادمی NEXORA FORGE">
 <title>مدیریت آکادمی | NEXORA FORGE</title>
 <link rel="stylesheet" href="style.css?v=academy-cms">
-<link rel="stylesheet" href="admin.css?v=forge-admin-1">
+<link rel="stylesheet" href="admin.css?v=forge-admin-2">
 </head>
 <body class="admin-page">
 <header class="admin-topbar">
@@ -45,6 +45,20 @@
       <div class="admin-heading-mark">FORGE<span>_</span></div>
     </div>
     <div id="adminStatus" class="admin-status auth-message" role="status" aria-live="polite"></div>
+    <section id="adminLoginBox" class="admin-login-card" aria-labelledby="adminLoginTitle">
+      <span class="admin-kicker">SECURE ADMIN ACCESS</span>
+      <h2 id="adminLoginTitle">ورود مستقیم مدیر</h2>
+      <p>با ایمیل و رمز عبور حساب مدیریتی وارد شو. ورود به پنل دانش‌آموز لازم نیست.</p>
+      <form id="adminLoginForm" class="auth-form admin-login-form">
+        <label for="adminEmail">ایمیل مدیر</label>
+        <input id="adminEmail" type="email" autocomplete="username" required placeholder="name@example.com">
+        <label for="adminPassword">رمز عبور</label>
+        <input id="adminPassword" type="password" autocomplete="current-password" required placeholder="رمز عبور حساب">
+        <button class="btn primary" id="adminLoginButton" type="submit">ورود به مرکز مدیریت</button>
+      </form>
+      <button class="admin-forgot" id="adminForgotPassword" type="button">بازیابی رمز عبور</button>
+      <p class="admin-login-hint">این فرم فقط ورود است؛ حساب باید از قبل در Supabase ساخته شده و نقش آن در جدول academy_admins ثبت شده باشد.</p>
+    </section>
 
     <div id="adminWorkspace" hidden>
       <section class="admin-overview cms-panel" id="overviewPanel">
@@ -128,6 +142,6 @@
   </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin.js?v=forge-admin-1" defer></script>
+<script src="admin.js?v=forge-admin-2" defer></script>
 </body>
 </html>
