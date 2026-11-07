@@ -175,7 +175,7 @@ $("nextQuestion").addEventListener("click",()=>{
 async function loadPublishedCurriculum(){
  try{
   if(!window.supabase?.createClient)return;
-  const db=window.supabase.createClient("https://ufranjjvhmsrkoxtlqcl.supabase.co","sb_publishable_PiggBtDvCsSOwiT62J21Ag_fJA7M_v_");
+  const db=window.supabase.createClient("https://vfatmvmgtgpmnxqbgszm.supabase.co","sb_publishable_PiggBtDvCsSOwiT62J21Ag_fJA7M_v_");
   const [courseResult,lessonResult]=await Promise.all([
    db.from("academy_courses").select("id,title,description,level,sort_order").eq("is_published",true).order("sort_order"),
    db.from("academy_lessons").select("id,course_id,title,content_html,starter_code,exercise,sort_order").eq("is_published",true).order("sort_order")
