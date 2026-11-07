@@ -102,20 +102,8 @@
     currentUser = session?.user || null;
     if (currentUser) {
       $("authOpenBtn").textContent = "پنل دانش‌آموزی";
-      $("authOpenBtn").onclick = () => {
-        panel.hidden = false;
-        panel.scrollIntoView({behavior:"smooth", block:"start"});
-        renderDashboard().catch(error => { $("studentDataStatus").textContent = "بارگذاری اطلاعات انجام نشد: " + (error.message || "خطای پایگاه داده"); });
-      };
-      try {
-        await syncProgress();
-        await renderDashboard();
-        $("studentDataStatus").textContent = "";
-        panel.hidden = false;
-      } catch (error) {
-        panel.hidden = false;
-        $("studentDataStatus").textContent = "حساب فعال است؛ برای فعال‌شدن ذخیره‌سازی ابری، فایل supabase/academy-students.sql را در SQL Editor پروژه Supabase اجرا کن. جزئیات: " + (error.message || "خطای پایگاه داده");
-      }
+      $("authOpenBtn").onclick = () => { window.location.href = "student.html"; };
+      panel.hidden = true;
     } else {
       $("authOpenBtn").textContent = "ورود / ثبت‌نام";
       $("authOpenBtn").onclick = () => openModal("login");
@@ -142,6 +130,7 @@
       closeModal();
       const { data } = await client.auth.getSession();
       await applySession(data.session);
+      window.location.href = "student.html";
     } catch (error) {
       setMessage(error.message || "ورود انجام نشد.");
     } finally { setBusy(false); }
@@ -155,16 +144,18 @@
       const { data, error } = await client.auth.signUp({
         email: $("signupEmail").value.trim(),
         password: $("signupPassword").value,
-        options: { data: { full_name: $("signupName").value.trim() }, emailRedirectTo: window.location.origin + window.location.pathname }
+        options: { data: { full_name: $("signupName").value.trim() }, emailRedirectTo: new URL("student.html", window.location.href).href }
       });
       if (error) throw error;
+      if ($("signupPassword").value !== $("signupPasswordConfirm").value) throw new Error("رمز عبور و تکرار آن یکسان نیستند.");
+      if (!/^(?=.*[A-Za-z])(?=.*\d).{10,}$/.test($("signupPassword").value)) throw new Error("رمز باید حداقل ۱۰ نویسه و شامل حرف انگلیسی و عدد باشد.");
       if (data.session) {
         setMessage("حساب ساخته شد و وارد شدی.", true);
         closeModal();
         await applySession(data.session);
+        window.location.href = "student.html";
       } else {
-        showTab("login");
-        setMessage("حساب ساخته شد. ایمیلت را باز کن و پیوند تأیید را بزن؛ سپس وارد شو.", true);
+        setMessage("حساب ساخته شد. ایمیلت را تأیید کن؛ سپس با همان حساب وارد می‌شوی.", true);
       }
     } catch (error) {
       setMessage(error.message || "ثبت‌نام انجام نشد.");
@@ -193,5 +184,13 @@
   client.auth.getSession().then(({data, error}) => {
     if (error) throw error;
     applySession(data.session);
+    if (new URLSearchParams(location.search).get("auth") === "login" && !data.session) openModal("login");
   }).catch(error => console.error("Auth initialization failed:", error));
+
+  const homeAds = $("homeAds");
+  if (homeAds) client.from("academy_ads").select("title,body,image_url,target_url").in("placement",["home","both"]).then(({data,error}) => {
+    if (error || !data || !data.length) { homeAds.hidden = true; return; }
+    homeAds.hidden = false;
+    homeAds.innerHTML = data.map(ad => '<article class="student-box" style="margin:10px 0"><strong>'+safeText(ad.title)+'</strong><p>'+safeText(ad.body)+'</p>'+(ad.image_url?'<img src="'+safeText(ad.image_url)+'" alt="" style="max-width:100%;max-height:180px;border-radius:10px">':"")+(ad.target_url?'<p><a class="btn small" href="'+safeText(ad.target_url)+'" target="_blank" rel="noopener noreferrer">مشاهده</a></p>':"")+'</article>').join("");
+  });
 })();
