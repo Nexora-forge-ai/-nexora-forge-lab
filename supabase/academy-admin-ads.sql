@@ -1,5 +1,5 @@
 -- NEXORA FORGE ACADEMY: secure administrator role and advertisement management
--- Run in Supabase SQL Editor for project ufranjjvhmsrkoxtlqcl.
+-- Run in Supabase SQL Editor for project vfatmvmgtgpmnxqbgszm.
 -- Admin membership is granted manually from SQL Editor only. Never add a public signup path for admins.
 
 create table if not exists public.academy_admins (
