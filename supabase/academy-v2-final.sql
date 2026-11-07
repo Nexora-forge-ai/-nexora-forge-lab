@@ -585,7 +585,7 @@ returns void
 language plpgsql
 security definer
 set search_path = public
-as $
+as $$
 begin
   if auth.uid() is null or not public.academy_is_super_admin() then
     raise exception 'Super-admin permission required';
@@ -610,7 +610,7 @@ begin
   values(auth.uid(),case when p_enabled then 'role_granted' else 'role_revoked' end,
     'user',p_user_id::text,jsonb_build_object('role',p_role));
 end;
-$;
+$$;
 revoke all on function public.academy_set_user_role(uuid,text,boolean) from public, anon;
 grant execute on function public.academy_set_user_role(uuid,text,boolean) to authenticated;
 
@@ -627,7 +627,7 @@ language sql
 stable
 security definer
 set search_path = public
-as $
+as $$
   select p.user_id, u.email, p.display_name, u.created_at,
     (select count(*) from public.academy_lesson_progress lp
       where lp.user_id=p.user_id and lp.status='completed'),
@@ -636,7 +636,7 @@ as $
   join auth.users u on u.id=p.user_id
   where public.academy_is_admin()
   order by u.created_at desc;
-$;
+$$;
 revoke all on function public.academy_admin_student_overview() from public, anon;
 grant execute on function public.academy_admin_student_overview() to authenticated;
 
