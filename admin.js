@@ -25,5 +25,6 @@ async function loadAds(){const {data,error}=await db.from("academy_ads").select(
 $("adForm").onsubmit=async e=>{e.preventDefault();try{const payload={title:$("adTitle").value.trim(),body:$("adBody").value.trim(),image_url:urlSafe($("adImage").value.trim()),target_url:urlSafe($("adTarget").value.trim()),placement:$("adPlacement").value,is_active:$("adActive").checked,updated_at:new Date().toISOString()};const id=$("adId").value;const {error}=id?await db.from("academy_ads").update(payload).eq("id",id):await db.from("academy_ads").insert(payload);if(error)throw error;$("adForm").reset();$("adId").value="";await loadAds();say("تبلیغ ذخیره شد.",true);}catch(e){say(e.message);}};
 $("clearAd").onclick=()=>$("adForm").reset();
 document.querySelectorAll("[data-admin-tab]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-admin-tab]").forEach(x=>x.classList.toggle("primary",x===b));document.querySelectorAll(".cms-panel").forEach(x=>x.hidden=x.id!==b.dataset.adminTab+"Panel");});
+$("adminLogout").onclick=async()=>{const {error}=await db.auth.signOut();if(error){say(error.message);return;}location.replace("index.html");};
 guard().catch(e=>say("خطا: "+e.message));
 })();
