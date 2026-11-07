@@ -105,14 +105,16 @@
       $("authOpenBtn").onclick = () => {
         panel.hidden = false;
         panel.scrollIntoView({behavior:"smooth", block:"start"});
-        renderDashboard().catch(error => console.error(error));
+        renderDashboard().catch(error => { $("studentDataStatus").textContent = "بارگذاری اطلاعات انجام نشد: " + (error.message || "خطای پایگاه داده"); });
       };
       try {
         await syncProgress();
         await renderDashboard();
+        $("studentDataStatus").textContent = "";
         panel.hidden = false;
       } catch (error) {
-        setMessage("ورود انجام شد، اما همگام‌سازی کامل نشد: " + (error.message || "خطای پایگاه داده"));
+        panel.hidden = false;
+        $("studentDataStatus").textContent = "حساب فعال است؛ برای فعال‌شدن ذخیره‌سازی ابری، فایل supabase/academy-students.sql را در SQL Editor پروژه Supabase اجرا کن. جزئیات: " + (error.message || "خطای پایگاه داده");
       }
     } else {
       $("authOpenBtn").textContent = "ورود / ثبت‌نام";
