@@ -15,7 +15,6 @@ begin;
 -- public media bucket, nine courses, and imports the existing 58 beginner lessons.
 -- Do not rerun after editing lesson content: the lesson seed uses ON CONFLICT DO NOTHING.
 
-begin;
 
 create extension if not exists pgcrypto;
 
@@ -699,7 +698,6 @@ on conflict(id) do update set title=excluded.title,slug=excluded.slug,summary=ex
 
 commit;
 
-commit;
 
 -- ONE-TIME OWNER BOOTSTRAP:
 -- 1. Register the owner's account through the website and verify the email.
