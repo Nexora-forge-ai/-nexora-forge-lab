@@ -1,197 +1,102 @@
-/* NEXORA FORGE ACADEMY - optional student accounts */
+/* NEXORA FORGE ACADEMY — Supabase Auth + academy schema */
 (() => {
-  "use strict";
-  const SUPABASE_URL = "https://vfatmvmgtgpmnxqbgszm.supabase.co";
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_PiggBtDvCsSOwiT62J21Ag_fJA7M_v_";
-  const $ = id => document.getElementById(id);
-  const modal = $("authModal");
-  const panel = $("studentPanel");
-  const message = $("authMessage");
-  if (!window.supabase || !window.supabase.createClient) {
-    if ($("authOpenBtn")) $("authOpenBtn").addEventListener("click", () => alert("سرویس ورود بارگذاری نشد. اتصال اینترنت را بررسی و صفحه را تازه‌سازی کن."));
-    return;
-  }
-  const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-  });
-  let currentUser = null;
-  let busy = false;
-  const safeUrl = value => { try { const u = new URL(value); return ["http:","https:"].includes(u.protocol) ? u.href : ""; } catch (_) { return ""; } };
-  const safeText = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-  const getLocalDone = () => {
-    try { const value = JSON.parse(localStorage.getItem("nexoraAcademyDone") || "[]"); return Array.isArray(value) ? value.filter(x => typeof x === "string") : []; }
-    catch (_) { return []; }
-  };
-  function setMessage(text, success=false) {
-    message.textContent = text;
-    message.classList.toggle("success", success);
-  }
-  function openModal(tab="login") {
-    modal.hidden = false;
-    document.body.style.overflow = "hidden";
-    showTab(tab);
-    setMessage("");
-  }
-  function closeModal() {
-    modal.hidden = true;
-    document.body.style.overflow = "";
-  }
-  function showTab(tab) {
-    const signup = tab === "signup";
-    $("loginForm").hidden = signup;
-    $("signupForm").hidden = !signup;
-    $("showLogin").classList.toggle("active", !signup);
-    $("showSignup").classList.toggle("active", signup);
-    $("authTitle").textContent = signup ? "ساخت حساب دانش‌آموزی" : "ورود به حساب دانش‌آموزی";
-    setMessage("");
-  }
-  function setBusy(value) {
-    busy = value;
-    document.querySelectorAll(".auth-form button").forEach(button => button.disabled = value);
-  }
-  async function syncProgress() {
-    if (!currentUser) return;
-    const local = getLocalDone();
-    const { data, error } = await client.from("student_progress").select("completed_lessons").eq("user_id", currentUser.id).maybeSingle();
-    if (error) throw error;
-    const merged = [...new Set([...local, ...((data && Array.isArray(data.completed_lessons)) ? data.completed_lessons : [])])];
-    const { error: saveError } = await client.from("student_progress").upsert({
-      user_id: currentUser.id,
-      completed_lessons: merged,
-      updated_at: new Date().toISOString()
-    }, { onConflict: "user_id" });
-    if (saveError) throw saveError;
-    window.dispatchEvent(new CustomEvent("nexora:progress-loaded", { detail: merged }));
-  }
-  async function saveQuizResult(result) {
-    if (!currentUser || !result || !Number.isInteger(result.score) || !Number.isInteger(result.total)) return;
-    const { error } = await client.from("student_quiz_attempts").insert({
-      user_id: currentUser.id, score: result.score, total: result.total
-    });
-    if (error) console.error("Quiz result could not be saved:", error.message);
-    await renderDashboard();
-  }
-  async function renderDashboard() {
-    if (!currentUser) return;
-    const name = currentUser.user_metadata?.full_name || currentUser.email || "دانش‌آموز";
-    $("studentWelcome").textContent = "خوش آمدی، " + name;
-    const local = getLocalDone();
-    $("studentDoneCount").textContent = local.length.toLocaleString("fa-IR");
-    $("studentPercent").textContent = Math.round(local.length / 58 * 100).toLocaleString("fa-IR") + "٪";
-    const courseMap = [
-      {key:"html",name:"HTML",count:15},
-      {key:"css",name:"CSS",count:18},
-      {key:"js",name:"JavaScript",count:25}
-    ];
-    $("studentCourseProgress").innerHTML = courseMap.map(course => {
-      const count = local.filter(id => id.startsWith(course.key + ":")).length;
-      const pct = Math.round(count / course.count * 100);
-      return '<div class="student-course-row"><div class="student-course-title"><strong>'+course.name+'</strong><span>'+count+' از '+course.count+' درس</span></div><div class="student-course-track"><span style="width:'+pct+'%"></span></div></div>';
-    }).join("");
-    const [{ data, error }, countResult] = await Promise.all([
-      client.from("student_quiz_attempts").select("score,total,created_at").eq("user_id", currentUser.id).order("created_at", {ascending:false}).limit(5),
-      client.from("student_quiz_attempts").select("id", {count:"exact", head:true}).eq("user_id", currentUser.id)
-    ]);
-    if (error) throw error;
-    if (countResult.error) throw countResult.error;
-    $("studentQuizCount").textContent = (countResult.count || 0).toLocaleString("fa-IR");
-    $("studentQuizHistory").innerHTML = data && data.length ? data.map(item =>
-      '<div class="student-quiz-row">امتیاز: <strong>'+item.score+' از '+item.total+'</strong> <span>· '+new Date(item.created_at).toLocaleDateString("fa-IR")+'</span></div>'
-    ).join("") : "هنوز نتیجه‌ای ثبت نشده است.";
-  }
-  async function applySession(session) {
-    currentUser = session?.user || null;
-    if (currentUser) {
-      $("authOpenBtn").textContent = "پنل دانش‌آموزی";
-      $("authOpenBtn").onclick = () => { window.location.href = "student.html"; };
-      panel.hidden = true;
-    } else {
-      $("authOpenBtn").textContent = "ورود / ثبت‌نام";
-      $("authOpenBtn").onclick = () => openModal("login");
-      panel.hidden = true;
-    }
-  }
-  $("authOpenBtn").onclick = () => openModal("login");
-  $("showLogin").addEventListener("click", () => showTab("login"));
-  $("showSignup").addEventListener("click", () => showTab("signup"));
-  document.querySelectorAll("[data-auth-close]").forEach(el => el.addEventListener("click", closeModal));
-  document.addEventListener("keydown", event => { if (event.key === "Escape" && !modal.hidden) closeModal(); });
-
-  $("loginForm").addEventListener("submit", async event => {
-    event.preventDefault();
-    if (busy) return;
-    setBusy(true); setMessage("در حال ورود...");
-    try {
-      const { error } = await client.auth.signInWithPassword({
-        email: $("loginEmail").value.trim(),
-        password: $("loginPassword").value
-      });
-      if (error) throw error;
-      setMessage("ورود موفق بود.", true);
-      closeModal();
-      const { data } = await client.auth.getSession();
-      await applySession(data.session);
-      window.location.href = "student.html";
-    } catch (error) {
-      setMessage(error.message || "ورود انجام نشد.");
-    } finally { setBusy(false); }
-  });
-
-  $("signupForm").addEventListener("submit", async event => {
-    event.preventDefault();
-    if (busy) return;
-    setBusy(true); setMessage("در حال ساخت حساب...");
-    try {
-      if ($("signupPassword").value !== $("signupPasswordConfirm").value) throw new Error("رمز عبور و تکرار آن یکسان نیستند.");
-      if (!/^(?=.*[A-Za-z])(?=.*\d).{10,}$/.test($("signupPassword").value)) throw new Error("رمز باید حداقل ۱۰ نویسه و شامل حرف انگلیسی و عدد باشد.");
-      const { data, error } = await client.auth.signUp({
-        email: $("signupEmail").value.trim(),
-        password: $("signupPassword").value,
-        options: { data: { full_name: $("signupName").value.trim() }, emailRedirectTo: new URL("student.html", window.location.href).href }
-      });
-      if (error) throw error;
-      if (data.session) {
-        setMessage("حساب ساخته شد و وارد شدی.", true);
-        closeModal();
-        await applySession(data.session);
-        window.location.href = "student.html";
-      } else {
-        setMessage("حساب ساخته شد. ایمیلت را تأیید کن؛ سپس با همان حساب وارد می‌شوی.", true);
-      }
-    } catch (error) {
-      setMessage(error.message || "ثبت‌نام انجام نشد.");
-    } finally { setBusy(false); }
-  });
-
-  $("studentLogout").addEventListener("click", async () => {
-    const { error } = await client.auth.signOut();
-    if (error) { alert("خروج انجام نشد: " + error.message); return; }
-    panel.hidden = true;
-    await applySession(null);
-  });
-
-  window.addEventListener("nexora:progress-updated", async event => {
-    if (!currentUser || !Array.isArray(event.detail)) return;
-    const { error } = await client.from("student_progress").upsert({
-      user_id: currentUser.id,
-      completed_lessons: event.detail,
-      updated_at: new Date().toISOString()
-    }, { onConflict: "user_id" });
-    if (error) console.error("Progress sync failed:", error.message);
-    else renderDashboard().catch(console.error);
-  });
-  window.addEventListener("nexora:quiz-finished", event => saveQuizResult(event.detail).catch(console.error));
-
-  client.auth.getSession().then(({data, error}) => {
-    if (error) throw error;
-    applySession(data.session);
-    if (new URLSearchParams(location.search).get("auth") === "login" && !data.session) openModal("login");
-  }).catch(error => console.error("Auth initialization failed:", error));
-
-  const homeAds = $("homeAds");
-  if (homeAds) client.from("academy_ads").select("title,body,image_url,target_url").in("placement",["home","both"]).then(({data,error}) => {
-    if (error || !data || !data.length) { homeAds.hidden = true; return; }
-    homeAds.hidden = false;
-    homeAds.innerHTML = data.map(ad => '<article class="student-box" style="margin:10px 0"><strong>'+safeText(ad.title)+'</strong><p>'+safeText(ad.body)+'</p>'+(safeUrl(ad.image_url)?'<img src="'+safeText(safeUrl(ad.image_url))+'" alt="" style="max-width:100%;max-height:180px;border-radius:10px">':"")+(safeUrl(ad.target_url)?'<p><a class="btn small" href="'+safeText(safeUrl(ad.target_url))+'" target="_blank" rel="noopener noreferrer">مشاهده</a></p>':"")+'</article>').join("");
-  });
+"use strict";
+const SUPABASE_URL="https://nutgcqhcgytjglyuvmla.supabase.co";
+const SUPABASE_KEY="sb_publishable_2HmqcVNPPPhULFeNPIbRlg_54LwTQEt";
+const $=id=>document.getElementById(id);
+const modal=$("authModal"), panel=$("studentPanel"), message=$("authMessage");
+if(!window.supabase?.createClient){$("authOpenBtn")?.addEventListener("click",()=>alert("سرویس ورود بارگذاری نشد. اتصال اینترنت را بررسی کن."));return;}
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+let currentUser=null,busy=false;
+const safeUrl=value=>{try{const u=new URL(value);return ["http:","https:"].includes(u.protocol)?u.href:""}catch{return""}};
+const safeText=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+const localDone=()=>{try{const x=JSON.parse(localStorage.getItem("nexoraAcademyDone")||"[]");return Array.isArray(x)?[...new Set(x.filter(v=>typeof v==="string"))]:[]}catch{return[]}};
+function setMessage(text,success=false){if(!message)return;message.textContent=text;message.classList.toggle("success",success);}
+function openModal(tab="login"){modal.hidden=false;document.body.style.overflow="hidden";showTab(tab);}
+function closeModal(){modal.hidden=true;document.body.style.overflow="";}
+function showTab(tab){const signup=tab==="signup";$("loginForm").hidden=signup;$("signupForm").hidden=!signup;$("showLogin").classList.toggle("active",!signup);$("showSignup").classList.toggle("active",signup);$("authTitle").textContent=signup?"ساخت حساب دانش‌آموزی":"ورود به حساب دانش‌آموزی";setMessage("");}
+function setBusy(value){busy=value;document.querySelectorAll(".auth-form button").forEach(b=>b.disabled=value);}
+async function syncProgress(){
+ if(!currentUser)return;
+ const local=localDone();
+ const {data,error}=await db.from("academy_lesson_progress").select("lesson_id").eq("user_id",currentUser.id);
+ if(error)throw error;
+ const merged=[...new Set([...local,...(data||[]).map(x=>x.lesson_id)])];
+ if(merged.length){
+  const rows=merged.map(lesson_id=>({user_id:currentUser.id,lesson_id,status:"completed",completed_at:new Date().toISOString()}));
+  const {error:saveError}=await db.from("academy_lesson_progress").upsert(rows,{onConflict:"user_id,lesson_id"});
+  if(saveError)throw saveError;
+ }
+ localStorage.setItem("nexoraAcademyDone",JSON.stringify(merged));
+ window.dispatchEvent(new CustomEvent("nexora:progress-loaded",{detail:merged}));
+}
+async function renderDashboard(){
+ if(!currentUser||!panel)return;
+ const [{data:profile,error:profileError},{data:progress,error:progressError},{data:lessons,error:lessonsError},{data:courses,error:coursesError},{count:quizCount,error:quizError}]=await Promise.all([
+  db.from("academy_profiles").select("display_name,avatar_path").eq("user_id",currentUser.id).maybeSingle(),
+  db.from("academy_lesson_progress").select("lesson_id").eq("user_id",currentUser.id).eq("status","completed"),
+  db.from("academy_lessons").select("id,course_id").eq("status","published"),
+  db.from("academy_courses").select("id,title").eq("status","published"),
+  db.from("academy_quiz_attempts").select("id",{count:"exact",head:true}).eq("user_id",currentUser.id)
+ ]);
+ for(const e of [profileError,progressError,lessonsError,coursesError,quizError])if(e)throw e;
+ const done=(progress||[]).map(x=>x.lesson_id),total=(lessons||[]).length;
+ $("studentWelcome").textContent="خوش آمدی، "+(profile?.display_name||currentUser.user_metadata?.display_name||currentUser.email||"دانش‌آموز");
+ $("studentDoneCount").textContent=done.length.toLocaleString("fa-IR");
+ $("studentPercent").textContent=(total?Math.round(done.length/total*100):0).toLocaleString("fa-IR")+"٪";
+ $("studentQuizCount").textContent=(quizCount||0).toLocaleString("fa-IR");
+ $("studentCourseProgress").innerHTML=(courses||[]).map(c=>{
+  const ids=(lessons||[]).filter(l=>l.course_id===c.id).map(l=>l.id),n=ids.filter(id=>done.includes(id)).length,pct=ids.length?Math.round(n/ids.length*100):0;
+  return '<div class="student-course-row"><div class="student-course-title"><strong>'+safeText(c.title)+'</strong><span>'+n.toLocaleString("fa-IR")+' از '+ids.length.toLocaleString("fa-IR")+' درس</span></div><div class="student-course-track"><span style="width:'+pct+'%"></span></div></div>';
+ }).join("")||"هنوز دوره منتشرشده‌ای وجود ندارد.";
+ $("studentQuizHistory").textContent="آزمون‌های تعاملی فعلی در مرورگر اجرا می‌شوند و هنوز به سامانه ثبت نمره امن متصل نشده‌اند؛ بنابراین نتیجه‌ای در سوابق ابری ثبت نمی‌شود.";
+}
+async function applySession(session){
+ currentUser=session?.user||null;
+ if(currentUser){
+  $("authOpenBtn").textContent="پنل دانش‌آموزی";
+  $("authOpenBtn").onclick=()=>location.href="student.html";
+  if(panel)panel.hidden=false;
+  try{await syncProgress();await renderDashboard();}catch(e){$("studentDataStatus").textContent="ورود انجام شد، اما همگام‌سازی پیشرفت کامل نشد: "+e.message;}
+ }else{
+  $("authOpenBtn").textContent="ورود / ثبت‌نام";
+  $("authOpenBtn").onclick=()=>openModal("login");
+  if(panel)panel.hidden=true;
+ }
+}
+$("authOpenBtn").onclick=()=>openModal("login");
+$("showLogin").addEventListener("click",()=>showTab("login"));
+$("showSignup").addEventListener("click",()=>showTab("signup"));
+document.querySelectorAll("[data-auth-close]").forEach(el=>el.addEventListener("click",closeModal));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!modal.hidden)closeModal();});
+$("loginForm").addEventListener("submit",async e=>{
+ e.preventDefault();if(busy)return;setBusy(true);setMessage("در حال ورود...");
+ try{const {data,error}=await db.auth.signInWithPassword({email:$("loginEmail").value.trim(),password:$("loginPassword").value});if(error)throw error;closeModal();await applySession(data.session);location.href="student.html";}
+ catch(err){setMessage(err.message||"ورود انجام نشد.");}finally{setBusy(false);}
+});
+$("signupForm").addEventListener("submit",async e=>{
+ e.preventDefault();if(busy)return;setBusy(true);setMessage("در حال ساخت حساب...");
+ try{
+  const name=$("signupName").value.trim(),password=$("signupPassword").value;
+  if(password!==$("signupPasswordConfirm").value)throw Error("رمز عبور و تکرار آن یکسان نیستند.");
+  if(!/^(?=.*[A-Za-z])(?=.*\d).{10,}$/.test(password))throw Error("رمز باید حداقل ۱۰ نویسه و شامل حرف انگلیسی و عدد باشد.");
+  const {data,error}=await db.auth.signUp({email:$("signupEmail").value.trim(),password,options:{data:{display_name:name},emailRedirectTo:new URL("student.html",location.href).href}});
+  if(error)throw error;
+  if(data.session){closeModal();await applySession(data.session);location.href="student.html";}
+  else setMessage("حساب ساخته شد. ایمیلت را تأیید کن؛ سپس وارد شو.",true);
+ }catch(err){setMessage(err.message||"ثبت‌نام انجام نشد.");}finally{setBusy(false);}
+});
+$("studentLogout").addEventListener("click",async()=>{const {error}=await db.auth.signOut();if(error){alert("خروج انجام نشد: "+error.message);return;}await applySession(null);});
+window.addEventListener("nexora:progress-updated",async e=>{
+ if(!currentUser||!Array.isArray(e.detail))return;
+ try{const rows=e.detail.map(lesson_id=>({user_id:currentUser.id,lesson_id,status:"completed",completed_at:new Date().toISOString()}));if(rows.length){const {error}=await db.from("academy_lesson_progress").upsert(rows,{onConflict:"user_id,lesson_id"});if(error)throw error;}await renderDashboard();}
+ catch(err){const status=$("studentDataStatus");if(status)status.textContent="ذخیره پیشرفت ناموفق بود: "+err.message;}
+});
+db.auth.getSession().then(({data,error})=>{if(error)throw error;return applySession(data.session).then(()=>{if(new URLSearchParams(location.search).get("auth")==="login"&&!data.session)openModal("login");});}).catch(e=>console.error("Auth initialization failed:",e));
+const homeAds=$("homeAds");
+if(homeAds)db.from("academy_ads").select("title,body,image_path,target_url,placement").eq("status","active").in("placement",["home","both"]).then(({data,error})=>{
+ if(error||!data?.length){homeAds.hidden=true;return;}
+ homeAds.hidden=false;
+ homeAds.innerHTML='<div class="wrap"><div class="section-head"><div><h2>تبلیغات و اطلاعیه‌ها</h2><p class="sub">پیام‌های منتشرشده از مدیریت آکادمی</p></div></div>'+data.map(a=>'<article class="student-box" style="margin:10px 0"><strong>'+safeText(a.title)+'</strong><p>'+safeText(a.body)+'</p>'+(safeUrl(a.image_path)?'<img src="'+safeText(safeUrl(a.image_path))+'" alt="" style="max-width:100%;max-height:180px;border-radius:10px">':"")+(safeUrl(a.target_url)?'<p><a class="btn small" href="'+safeText(safeUrl(a.target_url))+'" target="_blank" rel="noopener noreferrer">مشاهده</a></p>':"")+'</article>').join("")+'</div>';
+});
 })();
