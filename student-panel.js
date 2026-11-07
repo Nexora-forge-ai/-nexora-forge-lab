@@ -5,6 +5,7 @@ const KEY="sb_publishable_PiggBtDvCsSOwiT62J21Ag_fJA7M_v_";
 const client=window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=id=>document.getElementById(id);
 const done=()=>{try{const x=JSON.parse(localStorage.getItem("nexoraAcademyDone")||"[]");return Array.isArray(x)?x:[]}catch{return[]}};
+const safeUrl=s=>{try{const u=new URL(s);return ["http:","https:"].includes(u.protocol)?u.href:""}catch{return""}};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 async function start(){
  const {data:{session}}=await client.auth.getSession();
@@ -15,6 +16,9 @@ async function start(){
  const {data:progress,error:pErr}=await client.from("student_progress").select("completed_lessons").eq("user_id",user.id).maybeSingle();
  if(pErr) throw pErr;
  const lessons=[...new Set([...local,...(progress?.completed_lessons||[])])];
+ localStorage.setItem("nexoraAcademyDone",JSON.stringify(lessons));
+ const {error:syncErr}=await client.from("student_progress").upsert({user_id:user.id,completed_lessons:lessons,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+ if(syncErr)throw syncErr;
  $("doneCount").textContent=lessons.length.toLocaleString("fa-IR");
  $("percent").textContent=Math.round(lessons.length/58*100).toLocaleString("fa-IR")+"٪";
  $("courseProgress").innerHTML=[["html","HTML",15],["css","CSS",18],["js","JavaScript",25]].map(([key,name,total])=>{const n=lessons.filter(x=>x.startsWith(key+":")).length;return '<div class="student-course-row"><div class="student-course-title"><strong>'+name+'</strong><span>'+n+' از '+total+' درس</span></div><div class="student-course-track"><span style="width:'+Math.min(100,n/total*100)+'%"></span></div></div>'}).join("");
@@ -24,7 +28,7 @@ async function start(){
  $("quizHistory").innerHTML=quizzes?.length?quizzes.map(q=>'<div class="student-quiz-row">امتیاز: <strong>'+q.score+' از '+q.total+'</strong> · '+new Date(q.created_at).toLocaleDateString("fa-IR")+'</div>').join(""):"هنوز نتیجه‌ای ثبت نشده است.";
  const {data:ads,error:aErr}=await client.from("academy_ads").select("title,body,image_url,target_url").in("placement",["student","both"]).order("created_at",{ascending:false});
  if(aErr)throw aErr;
- $("studentAds").innerHTML=ads?.length?ads.map(a=>'<article style="padding:12px 0;border-bottom:1px solid var(--line)"><strong>'+esc(a.title)+'</strong><p>'+esc(a.body)+'</p>'+(a.image_url?'<img src="'+esc(a.image_url)+'" alt="" style="max-width:100%;max-height:180px;border-radius:10px">':"")+(a.target_url?'<p><a class="btn small" href="'+esc(a.target_url)+'" target="_blank" rel="noopener noreferrer">مشاهده</a></p>':"")+'</article>').join(""):"فعلاً اطلاعیه‌ای منتشر نشده است.";
+ $("studentAds").innerHTML=ads?.length?ads.map(a=>'<article style="padding:12px 0;border-bottom:1px solid var(--line)"><strong>'+esc(a.title)+'</strong><p>'+esc(a.body)+'</p>'+(safeUrl(a.image_url)?'<img src="'+esc(safeUrl(a.image_url))+'" alt="" style="max-width:100%;max-height:180px;border-radius:10px">':"")+(safeUrl(a.target_url)?'<p><a class="btn small" href="'+esc(safeUrl(a.target_url))+'" target="_blank" rel="noopener noreferrer">مشاهده</a></p>':"")+'</article>').join(""):"فعلاً اطلاعیه‌ای منتشر نشده است.";
  const {data:admin}=await client.from("academy_admins").select("user_id").eq("user_id",user.id).maybeSingle();
  if(admin)$("adminShortcut").hidden=false;
 }
