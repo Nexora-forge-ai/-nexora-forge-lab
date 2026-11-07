@@ -1,7 +1,7 @@
 /* NEXORA FORGE ACADEMY - optional student accounts */
 (() => {
   "use strict";
-  const SUPABASE_URL = "https://vfatmvmgtgpmnxqbgszm.supabase.co";
+  const SUPABASE_URL = "https://ufranjjvhmsrkoxtlqcl.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_PiggBtDvCsSOwiT62J21Ag_fJA7M_v_";
   const $ = id => document.getElementById(id);
   const modal = $("authModal");
