@@ -134,3 +134,5 @@ pre{
 .auth-message.success{color:#79e3ae}
 @media(max-width:700px){.student-dashboard-grid{grid-template-columns:1fr}.student-panel-head{align-items:flex-start}.student-stats{gap:8px}.student-stat{padding:12px 8px}.student-stat strong{font-size:22px}.student-stat span{font-size:11px}}
 @media(max-width:560px){.auth-open{width:100%;margin:4px 0 0}.student-panel-head{flex-direction:column}}
+
+.auth-form[hidden]{display:none!important}
