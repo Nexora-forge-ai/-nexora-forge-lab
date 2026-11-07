@@ -141,14 +141,14 @@
     if (busy) return;
     setBusy(true); setMessage("در حال ساخت حساب...");
     try {
+      if ($("signupPassword").value !== $("signupPasswordConfirm").value) throw new Error("رمز عبور و تکرار آن یکسان نیستند.");
+      if (!/^(?=.*[A-Za-z])(?=.*\d).{10,}$/.test($("signupPassword").value)) throw new Error("رمز باید حداقل ۱۰ نویسه و شامل حرف انگلیسی و عدد باشد.");
       const { data, error } = await client.auth.signUp({
         email: $("signupEmail").value.trim(),
         password: $("signupPassword").value,
         options: { data: { full_name: $("signupName").value.trim() }, emailRedirectTo: new URL("student.html", window.location.href).href }
       });
       if (error) throw error;
-      if ($("signupPassword").value !== $("signupPasswordConfirm").value) throw new Error("رمز عبور و تکرار آن یکسان نیستند.");
-      if (!/^(?=.*[A-Za-z])(?=.*\d).{10,}$/.test($("signupPassword").value)) throw new Error("رمز باید حداقل ۱۰ نویسه و شامل حرف انگلیسی و عدد باشد.");
       if (data.session) {
         setMessage("حساب ساخته شد و وارد شدی.", true);
         closeModal();
