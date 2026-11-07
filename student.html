@@ -6,10 +6,14 @@
 <main class="wrap" style="padding:38px 0 60px">
 <section class="student-panel-section" style="display:block;border:1px solid var(--line);border-radius:18px;padding:24px">
 <div class="student-panel-head"><div><span class="eyebrow"><i></i> فضای اختصاصی یادگیری</span><h2>پنل دانش‌آموزی</h2><p class="sub" id="welcome">در حال بررسی حساب...</p></div><a class="btn primary" href="index.html#courses">ادامه یادگیری</a></div>
+<div class="student-profile-card">
+ <div class="student-avatar-wrap"><div id="avatarInitials" class="student-avatar-initials">NF</div><img id="avatarPreview" class="student-avatar" alt="عکس پروفایل" hidden></div>
+ <div class="student-profile-info"><strong>عکس پروفایل</strong><p>تصویر JPG، PNG یا WebP تا حداکثر ۲ مگابایت</p><div class="actions"><label class="btn small primary" for="avatarInput">انتخاب عکس</label><input id="avatarInput" type="file" accept="image/jpeg,image/png,image/webp" hidden><button class="btn small" id="removeAvatar" type="button">حذف عکس</button></div><p id="avatarStatus" class="auth-message" role="status"></p></div>
+</div>
 <div class="student-stats"><article class="student-stat"><strong id="doneCount">۰</strong><span>درس تکمیل‌شده</span></article><article class="student-stat"><strong id="percent">۰٪</strong><span>پیشرفت دوره‌ها</span></article><article class="student-stat"><strong id="quizCount">۰</strong><span>آزمون ثبت‌شده</span></article></div>
 <div class="student-dashboard-grid"><article class="student-box"><h3>پیشرفت دوره‌ها</h3><div id="courseProgress"></div></article><article class="student-box"><h3>آخرین نتایج آزمون</h3><div id="quizHistory">در حال بارگذاری...</div></article></div>
 <div class="student-box" style="margin-top:14px"><h3>تبلیغات و اطلاعیه‌ها</h3><div id="studentAds">در حال بارگذاری...</div></div>
 <p id="status" class="auth-message" role="status"></p>
 </section></main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="student-panel.js?v=2" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="student-panel.js?v=3" defer></script>
 </body></html>
