@@ -458,7 +458,7 @@ begin
     v_max := v_max + q.points;
     v_selected := null;
     select (item->>'option_id')::uuid into v_selected
-    from jsonb_array_elements(p_answers) item
+    from jsonb_array_elements(p_answers) as a(item)
     where item->>'question_id'=q.id::text
     limit 1;
     select option_id into v_correct from public.academy_quiz_correct_answers where question_id=q.id;
@@ -475,7 +475,7 @@ begin
   for q in select id from public.academy_quiz_questions where quiz_id=p_quiz_id loop
     v_selected := null;
     select (item->>'option_id')::uuid into v_selected
-    from jsonb_array_elements(p_answers) item
+    from jsonb_array_elements(p_answers) as a(item)
     where item->>'question_id'=q.id::text
     limit 1;
     select option_id into v_correct from public.academy_quiz_correct_answers where question_id=q.id;
@@ -558,6 +558,72 @@ insert into public.academy_site_settings(key,value,is_public) values
 ('registration',jsonb_build_object('enabled',true,'guest_access',true,'email_confirmation',true),true),
 ('catalog',jsonb_build_object('show_draft_courses',false),true)
 on conflict (key) do nothing;
+
+
+-- Super-admin controlled role management; no browser-side role table writes.
+create or replace function public.academy_set_user_role(
+  p_user_id uuid,
+  p_role text,
+  p_enabled boolean
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $
+begin
+  if auth.uid() is null or not public.academy_is_super_admin() then
+    raise exception 'Super-admin permission required';
+  end if;
+  if p_role not in ('student','admin','super_admin') then
+    raise exception 'Invalid role';
+  end if;
+  if p_user_id = auth.uid() and p_role = 'super_admin' and not p_enabled then
+    raise exception 'Cannot remove your own super-admin role';
+  end if;
+
+  if p_enabled then
+    insert into public.academy_user_roles(user_id,role)
+    values(p_user_id,p_role)
+    on conflict do nothing;
+  else
+    delete from public.academy_user_roles
+    where user_id=p_user_id and role=p_role;
+  end if;
+
+  insert into public.academy_activity_logs(actor_user_id,action,entity_type,entity_id,details)
+  values(auth.uid(),case when p_enabled then 'role_granted' else 'role_revoked' end,
+    'user',p_user_id::text,jsonb_build_object('role',p_role));
+end;
+$;
+revoke all on function public.academy_set_user_role(uuid,text,boolean) from public, anon;
+grant execute on function public.academy_set_user_role(uuid,text,boolean) to authenticated;
+
+create or replace function public.academy_admin_student_overview()
+returns table (
+  user_id uuid,
+  email text,
+  display_name text,
+  created_at timestamptz,
+  completed_lessons bigint,
+  quiz_attempts bigint
+)
+language sql
+stable
+security definer
+set search_path = public
+as $
+  select p.user_id, u.email, p.display_name, u.created_at,
+    (select count(*) from public.academy_lesson_progress lp
+      where lp.user_id=p.user_id and lp.status='completed'),
+    (select count(*) from public.academy_quiz_attempts qa where qa.user_id=p.user_id)
+  from public.academy_profiles p
+  join auth.users u on u.id=p.user_id
+  where public.academy_is_admin()
+  order by u.created_at desc;
+$;
+revoke all on function public.academy_admin_student_overview() from public, anon;
+grant execute on function public.academy_admin_student_overview() to authenticated;
 
 commit;
 
