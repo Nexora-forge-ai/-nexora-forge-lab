@@ -57,7 +57,7 @@
         <button class="btn primary" id="adminLoginButton" type="submit">ورود به مرکز مدیریت</button>
       </form>
       <button class="admin-forgot" id="adminForgotPassword" type="button">بازیابی رمز عبور</button>
-      <p class="admin-login-hint">این فرم فقط ورود است؛ حساب باید از قبل در Supabase ساخته شده و نقش آن در جدول academy_admins ثبت شده باشد.</p>
+      <p class="admin-login-hint">این فرم فقط ورود است؛ حساب باید از قبل در Supabase ساخته شده و نقش admin یا super_admin در جدول academy_user_roles ثبت شده باشد.</p>
     </section>
 
     <div id="adminWorkspace" hidden>
@@ -142,6 +142,6 @@
   </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="admin.js?v=forge-admin-3" defer></script>
+<script src="admin.js?v=forge-admin-4" defer></script>
 </body>
 </html>
