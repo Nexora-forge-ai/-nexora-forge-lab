@@ -94,6 +94,7 @@
         <label for="loginEmail">ایمیل</label><input id="loginEmail" type="email" autocomplete="email" required placeholder="name@example.com">
         <label for="loginPassword">رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" required minlength="8" placeholder="حداقل ۸ نویسه">
         <button class="btn primary" type="submit">ورود</button>
+        <button class="admin-forgot" id="studentForgotPassword" type="button">فراموشی رمز عبور</button>
       </form>
       <form id="signupForm" class="auth-form" hidden>
         <label for="signupName">نام نمایشی</label><input id="signupName" type="text" autocomplete="name" maxlength="60" required placeholder="نام شما">
@@ -107,6 +108,6 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js?v=11" defer></script>
-  <script src="student-auth.js?v=4" defer></script>
+  <script src="student-auth.js?v=5" defer></script>
 </body>
 </html>
