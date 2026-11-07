@@ -22,7 +22,8 @@ async function start(){
  for(const e of [pErr,prErr,cErr,lErr,qErr,qcErr,aErr,rErr])if(e)throw e;
  const done=(progress||[]).map(x=>x.lesson_id),total=(lessonRows||[]).length;
  $("welcome").textContent="خوش آمدی، "+(profile?.display_name||user.user_metadata?.display_name||user.email||"دانش‌آموز");
- const avatarPath=profile?.avatar_path;
+ let currentAvatarPath=profile?.avatar_path||null;
+ const avatarPath=currentAvatarPath;
  if(avatarPath){const {data}=db.storage.from("academy-avatars").getPublicUrl(avatarPath);$("avatarPreview").src=data.publicUrl;$("avatarPreview").hidden=false;$("avatarInitials").hidden=true;$("removeAvatar").hidden=false;}
  else{$("avatarPreview").hidden=true;$("avatarInitials").hidden=false;$("removeAvatar").hidden=true;}
  const avatarInput=$("avatarInput");
@@ -37,8 +38,11 @@ async function start(){
    const path=user.id+"/avatar."+ext;
    const {error:uploadError}=await db.storage.from("academy-avatars").upload(path,file,{upsert:true,contentType:file.type});
    if(uploadError)throw uploadError;
+   const previousPath=currentAvatarPath;
    const {error:updateError}=await db.from("academy_profiles").update({avatar_path:path}).eq("user_id",user.id);
    if(updateError)throw updateError;
+   currentAvatarPath=path;
+   if(previousPath&&previousPath!==path)await db.storage.from("academy-avatars").remove([previousPath]);
    const {data:publicData}=db.storage.from("academy-avatars").getPublicUrl(path);
    $("avatarPreview").src=publicData.publicUrl+"?v="+Date.now();$("avatarPreview").hidden=false;$("avatarInitials").hidden=true;$("removeAvatar").hidden=false;
    status.textContent="عکس پروفایل ذخیره شد.";
@@ -46,12 +50,12 @@ async function start(){
   finally{avatarInput.value="";}
  });
  $("removeAvatar").addEventListener("click",async()=>{
-  if(!profile?.avatar_path)return;
+  if(!currentAvatarPath)return;
   const status=$("avatarStatus");status.textContent="در حال حذف تصویر...";
   try{
-   const {error:removeError}=await db.storage.from("academy-avatars").remove([profile.avatar_path]);if(removeError)throw removeError;
+   const {error:removeError}=await db.storage.from("academy-avatars").remove([currentAvatarPath]);if(removeError)throw removeError;
    const {error:updateError}=await db.from("academy_profiles").update({avatar_path:null}).eq("user_id",user.id);if(updateError)throw updateError;
-   $("avatarPreview").hidden=true;$("avatarInitials").hidden=false;$("removeAvatar").hidden=true;status.textContent="عکس پروفایل حذف شد.";
+   currentAvatarPath=null;$("avatarPreview").hidden=true;$("avatarInitials").hidden=false;$("removeAvatar").hidden=true;status.textContent="عکس پروفایل حذف شد.";
   }catch(e){status.textContent="حذف عکس ناموفق بود: "+e.message;}
  });
  $("doneCount").textContent=done.length.toLocaleString("fa-IR");
