@@ -6,7 +6,61 @@ const $=id=>document.getElementById(id),esc=s=>String(s??"").replace(/[&<>"']/g,
 const say=(s,ok=false)=>{$("adminStatus").textContent=s;$("adminStatus").classList.toggle("success",ok)};
 let courses=[],lessons=[],ads=[],allowed=false;
 const urlSafe=s=>{if(!s)return null;const u=new URL(s);if(!["http:","https:"].includes(u.protocol))throw Error("فقط نشانی http یا https مجاز است.");return u.href;};
-async function guard(){const {data:{session}}=await db.auth.getSession();if(!session){location.replace("index.html?auth=login");return;} $("adminIdentity").textContent="حساب: "+(session.user.email||"مدیر");const {data,error}=await db.from("academy_admins").select("user_id").eq("user_id",session.user.id).maybeSingle();if(error)throw error;if(!data){say("این حساب مجوز مدیریت ندارد. ابتدا نقش مدیر را از SQL Editor اعطا کن.");return;}allowed=true;$("adminWorkspace").hidden=false;say("دسترسی مدیر تأیید شد.",true);await Promise.all([loadCourses(),loadLessons(),loadAds()]);}
+function showLogin(message="برای ورود به مرکز مدیریت، ایمیل و رمز عبور مدیر را وارد کن.") {
+  $("adminLoginBox").hidden=false;
+  $("adminWorkspace").hidden=true;
+  $("adminIdentity").textContent="ورود مستقل مدیر";
+  say(message);
+}
+async function verifyAdmin(session) {
+  $("adminIdentity").textContent="حساب: "+(session.user.email||"مدیر");
+  const {data,error}=await db.from("academy_admins").select("user_id").eq("user_id",session.user.id).maybeSingle();
+  if(error) throw error;
+  if(!data) {
+    await db.auth.signOut();
+    showLogin("این ایمیل حساب مدیر نیست یا هنوز نقش مدیریت برای آن ثبت نشده است.");
+    return false;
+  }
+  allowed=true;
+  $("adminLoginBox").hidden=true;
+  $("adminWorkspace").hidden=false;
+  $("adminLogout").hidden=false;
+  say("دسترسی مدیر تأیید شد.",true);
+  await Promise.all([loadCourses(),loadLessons(),loadAds()]);
+  return true;
+}
+async function guard() {
+  const {data:{session},error}=await db.auth.getSession();
+  if(error) throw error;
+  if(!session) { showLogin(); return; }
+  await verifyAdmin(session);
+}
+$("adminLoginForm").onsubmit=async e=>{
+  e.preventDefault();
+  const button=$("adminLoginButton");
+  button.disabled=true;
+  say("در حال بررسی اطلاعات ورود...");
+  try {
+    const email=$("adminEmail").value.trim();
+    const password=$("adminPassword").value;
+    const {data,error}=await db.auth.signInWithPassword({email,password});
+    if(error) throw error;
+    if(!data.session) throw new Error("ورود انجام نشد؛ وضعیت حساب را بررسی کن.");
+    const ok=await verifyAdmin(data.session);
+    if(!ok) return;
+  } catch(error) {
+    say(error.message==="Invalid login credentials"?"ایمیل یا رمز عبور اشتباه است.":error.message);
+  } finally { button.disabled=false; }
+};
+$("adminForgotPassword").onclick=async()=>{
+  const email=$("adminEmail").value.trim();
+  if(!email){say("ابتدا ایمیل حساب مدیر را وارد کن.");$("adminEmail").focus();return;}
+  try {
+    const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    if(error) throw error;
+    say("اگر این ایمیل در سامانه ثبت شده باشد، لینک بازیابی برایش ارسال می‌شود.",true);
+  } catch(error) { say(error.message); }
+};
 async function loadCourses(){const {data,error}=await db.from("academy_courses").select("*").order("sort_order");if(error)throw error;courses=data||[];$("courseList").innerHTML=courses.map(c=>'<article class="student-box cms-row"><strong>'+esc(c.title)+'</strong><p>'+esc(c.description)+'</p><small>'+esc(c.id)+' · '+(c.is_published?"منتشر":"پیش‌نویس")+'</small><div class="actions"><button class="btn small" data-course-edit="'+esc(c.id)+'">ویرایش</button><button class="btn danger small" data-course-del="'+esc(c.id)+'">حذف</button></div></article>').join("")||"دوره‌ای وجود ندارد."; $("lessonCourse").innerHTML=courses.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("");document.querySelectorAll("[data-course-edit]").forEach(b=>b.onclick=()=>editCourse(courses.find(c=>c.id===b.dataset.courseEdit)));document.querySelectorAll("[data-course-del]").forEach(b=>b.onclick=()=>deleteCourse(b.dataset.courseDel));}
 async function loadLessons(){const {data,error}=await db.from("academy_lessons").select("*").order("course_id").order("sort_order");if(error)throw error;lessons=data||[];$("lessonListAdmin").innerHTML=lessons.map(l=>'<article class="student-box cms-row"><strong>'+esc(l.title)+'</strong><p>'+esc(l.course_id)+' · '+esc(l.id)+' · '+(l.is_published?"منتشر":"پیش‌نویس")+'</p><div class="actions"><button class="btn small" data-lesson-edit="'+esc(l.id)+'">ویرایش</button><button class="btn danger small" data-lesson-del="'+esc(l.id)+'">حذف</button></div></article>').join("")||"درسی وجود ندارد.";document.querySelectorAll("[data-lesson-edit]").forEach(b=>b.onclick=()=>editLesson(lessons.find(l=>l.id===b.dataset.lessonEdit)));document.querySelectorAll("[data-lesson-del]").forEach(b=>b.onclick=()=>deleteLesson(b.dataset.lessonDel));}
 function resetCourse(){$("courseForm").reset();$("courseOldId").value="";$("coursePublished").checked=true;}
@@ -25,6 +79,6 @@ async function loadAds(){const {data,error}=await db.from("academy_ads").select(
 $("adForm").onsubmit=async e=>{e.preventDefault();try{const payload={title:$("adTitle").value.trim(),body:$("adBody").value.trim(),image_url:urlSafe($("adImage").value.trim()),target_url:urlSafe($("adTarget").value.trim()),placement:$("adPlacement").value,is_active:$("adActive").checked,updated_at:new Date().toISOString()};const id=$("adId").value;const {error}=id?await db.from("academy_ads").update(payload).eq("id",id):await db.from("academy_ads").insert(payload);if(error)throw error;$("adForm").reset();$("adId").value="";await loadAds();say("تبلیغ ذخیره شد.",true);}catch(e){say(e.message);}};
 $("clearAd").onclick=()=>$("adForm").reset();
 document.querySelectorAll("[data-admin-tab]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-admin-tab]").forEach(x=>x.classList.toggle("primary",x===b));document.querySelectorAll(".cms-panel").forEach(x=>x.hidden=x.id!==b.dataset.adminTab+"Panel");});
-$("adminLogout").onclick=async()=>{const {error}=await db.auth.signOut();if(error){say(error.message);return;}location.replace("index.html");};
+$("adminLogout").onclick=async()=>{const {error}=await db.auth.signOut();if(error){say(error.message);return;}allowed=false;location.reload();};
 guard().catch(e=>say("خطا: "+e.message));
 })();
