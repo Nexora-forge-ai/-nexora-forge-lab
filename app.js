@@ -175,20 +175,46 @@ $("nextQuestion").addEventListener("click",()=>{
 async function loadPublishedCurriculum(){
  try{
   if(!window.supabase?.createClient)return;
-  const db=window.supabase.createClient("https://vfatmvmgtgpmnxqbgszm.supabase.co","sb_publishable_PiggBtDvCsSOwiT62J21Ag_fJA7M_v_");
+  const db=window.supabase.createClient(
+   "https://nutgcqhcgytjglyuvmla.supabase.co",
+   "sb_publishable_2HmqcVNPPPhULFeNPIbRlg_54LwTQEt"
+  );
   const [courseResult,lessonResult]=await Promise.all([
-   db.from("academy_courses").select("id,title,description,level,sort_order").eq("is_published",true).order("sort_order"),
-   db.from("academy_lessons").select("id,course_id,title,content_html,starter_code,exercise,sort_order").eq("is_published",true).order("sort_order")
+   db.from("academy_courses")
+    .select("id,language_id,level_id,title,description,sort_order,status")
+    .eq("status","published")
+    .order("sort_order")
+    .order("language_id"),
+   db.from("academy_lessons")
+    .select("id,course_id,title,summary,content_html,starter_code,exercise,sort_order,status")
+    .eq("status","published")
+    .order("sort_order")
   ]);
-  if(courseResult.error||lessonResult.error)throw courseResult.error||lessonResult.error;
-  if(!courseResult.data?.length||!lessonResult.data?.length)return;
+  if(courseResult.error)throw courseResult.error;
+  if(lessonResult.error)throw lessonResult.error;
+  if(!courseResult.data?.length)return;
+  const levelNames={beginner:"مقدماتی",intermediate:"متوسط",advanced:"پیشرفته"};
   const next={};
   for(const c of courseResult.data){
-   const list=lessonResult.data.filter(l=>l.course_id===c.id).map(l=>({id:l.id,title:l.title,body:l.content_html,code:l.starter_code,exercise:l.exercise}));
-   if(list.length)next[c.id]={name:c.title,level:c.level||"مقدماتی",desc:c.description||"",lessons:list};
+   const list=(lessonResult.data||[])
+    .filter(l=>l.course_id===c.id)
+    .map(l=>({id:l.id,title:l.title,body:l.content_html||("<p>"+(l.summary||"")+"</p>"),code:l.starter_code||"",exercise:l.exercise||""}));
+   if(list.length)next[c.id]={
+    name:c.title,
+    level:levelNames[c.level_id]||c.level_id,
+    desc:c.description||"",
+    lessons:list
+   };
   }
-  if(Object.keys(next).length){courses=next;keys=Object.keys(courses);activeCourse=keys.includes(activeCourse)?activeCourse:keys[0];activeLesson=0;}
- }catch(error){console.warn("Using bundled curriculum because CMS data is unavailable:",error.message);}
+  if(Object.keys(next).length){
+   courses=next;
+   keys=Object.keys(courses);
+   activeCourse=keys.includes(activeCourse)?activeCourse:keys[0];
+   activeLesson=0;
+  }
+ }catch(error){
+  console.error("Curriculum database load failed:",error);
+ }
 }
 $("year").textContent=new Date().getFullYear();
 (async()=>{await loadPublishedCurriculum();renderCourses();renderCourseSelect();updateProgress();renderLesson();selectTab("html");renderPreview();renderQuiz();})();
