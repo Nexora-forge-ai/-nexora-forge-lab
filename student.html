@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#09090d"><title>پنل دانش‌آموزی | NEXORA FORGE</title><link rel="stylesheet" href="style.css?v=academy-panel"></head>
+<body>
+<header class="top"><div class="wrap nav"><a class="brand" href="index.html"><b>NEXORA</b> FORGE <span>/ ACADEMY</span></a><nav class="links" style="display:flex"><a href="index.html#courses">درس‌ها</a><a href="admin.html" id="adminShortcut" hidden>پنل مدیریت</a><button class="btn danger small" id="logoutBtn">خروج</button></nav></div></header>
+<main class="wrap" style="padding:38px 0 60px">
+<section class="student-panel-section" style="display:block;border:1px solid var(--line);border-radius:18px;padding:24px">
+<div class="student-panel-head"><div><span class="eyebrow"><i></i> فضای اختصاصی یادگیری</span><h2>پنل دانش‌آموزی</h2><p class="sub" id="welcome">در حال بررسی حساب...</p></div><a class="btn primary" href="index.html#courses">ادامه یادگیری</a></div>
+<div class="student-stats"><article class="student-stat"><strong id="doneCount">۰</strong><span>درس تکمیل‌شده</span></article><article class="student-stat"><strong id="percent">۰٪</strong><span>پیشرفت دوره‌ها</span></article><article class="student-stat"><strong id="quizCount">۰</strong><span>آزمون ثبت‌شده</span></article></div>
+<div class="student-dashboard-grid"><article class="student-box"><h3>پیشرفت دوره‌ها</h3><div id="courseProgress"></div></article><article class="student-box"><h3>آخرین نتایج آزمون</h3><div id="quizHistory">در حال بارگذاری...</div></article></div>
+<div class="student-box" style="margin-top:14px"><h3>تبلیغات و اطلاعیه‌ها</h3><div id="studentAds">در حال بارگذاری...</div></div>
+<p id="status" class="auth-message" role="status"></p>
+</section></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="student-panel.js?v=1" defer></script>
+</body></html>
