@@ -150,3 +150,6 @@ pre{
 .student-avatar-initials{display:grid;place-items:center;color:#ff7780;font:800 24px Arial}
 .student-profile-info{min-width:0}.student-profile-info strong{font-size:14px}.student-profile-info p{margin:5px 0;color:#a9a0aa;font-size:11px}
 @media(max-width:520px){.student-profile-card{align-items:flex-start;gap:12px;padding:13px}.student-avatar-wrap{width:68px;height:68px;flex-basis:68px}.student-profile-info .actions{flex-wrap:wrap}}
+
+.auth-forgot-link{display:block;width:100%;margin-top:8px;padding:7px;border:0;background:transparent;color:#ff8992;font:inherit;font-size:12px;text-align:center;cursor:pointer}
+.auth-forgot-link:hover{text-decoration:underline}
