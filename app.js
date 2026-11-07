@@ -102,7 +102,8 @@ const styles={
  css:"body{font-family:Arial,sans-serif;padding:20px;color:#222}.title{color:#c21d32;background:#fff0f1;padding:12px;border-radius:10px}button{padding:9px 14px;border:0;border-radius:8px;background:#c21d32;color:white}",
  js:"body{font-family:Arial,sans-serif;padding:20px;color:#222}button{padding:9px 14px;background:#c21d32;color:white;border:0;border-radius:8px}"
 };
-function saveDone(){localStorage.setItem("nexoraAcademyDone",JSON.stringify([...done]));updateProgress();}
+function saveDone(){localStorage.setItem("nexoraAcademyDone",JSON.stringify([...done]));updateProgress();window.dispatchEvent(new CustomEvent("nexora:progress-updated",{detail:[...done]}));}
+window.addEventListener("nexora:progress-loaded",event=>{if(!Array.isArray(event.detail))return;done.clear();event.detail.forEach(id=>done.add(id));localStorage.setItem("nexoraAcademyDone",JSON.stringify([...done]));updateProgress();renderLessonList();renderLesson();});
 function updateProgress(){const total=keys.reduce((n,k)=>n+courses[k].lessons.length,0);const count=$("lessonCount");if(count)count.textContent=total.toLocaleString("fa-IR");$("progressLabel").textContent=done.size.toLocaleString("fa-IR")+" از "+total.toLocaleString("fa-IR")+" درس";$("progressBar").style.width=(done.size/total*100)+"%";}
 function renderCourses(){$("courseGrid").innerHTML=keys.map(k=>{const c=courses[k];return '<button class="course" data-open-course="'+k+'"><span class="course-icon">'+k.toUpperCase()+'</span><h3>'+c.name+'</h3><p>'+c.desc+'</p><span class="course-foot"><span>'+c.level+'</span><span>'+c.lessons.length+' درس ←</span></span></button>';}).join("");document.querySelectorAll("[data-open-course]").forEach(b=>b.addEventListener("click",()=>openCourse(b.dataset.openCourse)));}
 function renderCourseSelect(){$("courseSelect").innerHTML=keys.map(k=>'<option value="'+k+'">'+courses[k].name+'</option>').join("");}
@@ -163,6 +164,7 @@ $("nextQuestion").addEventListener("click",()=>{
   if(qi<questions.length-1){qi++;renderQuiz();}
   else{
     quizFinished=true;
+    window.dispatchEvent(new CustomEvent("nexora:quiz-finished",{detail:{score,total:questions.length}}));
     $("quizQuestion").textContent="آزمون تمام شد؛ امتیاز تو "+score+" از "+questions.length+" است.";
     $("quizOptions").innerHTML="";
     $("quizFeedback").textContent=score===questions.length?"عالی! به همه سؤال‌ها درست پاسخ دادی.": "برای بهتر شدن، درس‌ها را مرور کن و دوباره آزمون بده.";
