@@ -15,10 +15,26 @@
     <button class="menu-btn" id="menuBtn" aria-label="باز کردن منو">☰</button>
     <nav class="links" id="navLinks">
       <a href="#courses">دوره‌ها</a><a href="#roadmap">نقشه راه</a><a href="#classroom">کلاس درس</a><a href="#playground">محیط تمرین</a>
+      <button class="btn small auth-open" id="authOpenBtn" type="button">ورود / ثبت‌نام</button>
     </nav>
   </div>
 </header>
 <main id="home">
+  <section class="student-panel-section" id="studentPanel" hidden>
+    <div class="wrap">
+      <div class="student-panel-head"><div><span class="eyebrow"><i></i> فضای اختصاصی یادگیری</span><h2>پنل دانش‌آموزی</h2><p class="sub" id="studentWelcome">خوش آمدی</p></div><button class="btn danger small" id="studentLogout" type="button">خروج از حساب</button></div>
+      <div class="student-stats">
+        <article class="student-stat"><strong id="studentDoneCount">۰</strong><span>درس تکمیل‌شده</span></article>
+        <article class="student-stat"><strong id="studentPercent">۰٪</strong><span>پیشرفت کل</span></article>
+        <article class="student-stat"><strong id="studentQuizCount">۰</strong><span>آزمون ثبت‌شده</span></article>
+      </div>
+      <div class="student-dashboard-grid">
+        <article class="student-box"><h3>پیشرفت دوره‌ها</h3><div id="studentCourseProgress"></div></article>
+        <article class="student-box"><h3>آخرین نتایج آزمون</h3><div id="studentQuizHistory">هنوز نتیجه‌ای ثبت نشده است.</div></article>
+      </div>
+      <p class="micro">پیشرفت حساب کاربری در فضای ابری ذخیره می‌شود. کدهای آزمایشی فعلاً فقط روی همین دستگاه می‌مانند.</p>
+    </div>
+  </section>
   <section class="hero wrap">
     <div class="hero-copy">
       <span class="eyebrow"><i></i> یادگیری از صفر، با تمرین واقعی</span>
@@ -65,6 +81,31 @@
   </div></section>
 </main>
 <footer class="footer"><div class="wrap footer-inner"><div><div class="brand"><b>NEXORA</b> FORGE <span>/ ACADEMY</span></div><p>یادگیری، تمرین، ساختن.</p></div><div class="footer-slogan">BUILD THE FUTURE</div><small>© <span id="year"></span> NEXORA FORGE. ساخته‌شده برای یادگیری.</small></div></footer>
-<script src="app.js?v=6" defer></script>
+<div class="auth-modal" id="authModal" hidden>
+    <div class="auth-backdrop" data-auth-close></div>
+    <section class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <button class="auth-close" type="button" data-auth-close aria-label="بستن">×</button>
+      <div class="brand auth-brand"><b>NEXORA</b> FORGE <span>/ ACADEMY</span></div>
+      <h2 id="authTitle">ورود به حساب دانش‌آموزی</h2>
+      <p class="auth-description">ثبت‌نام اختیاری است؛ بدون حساب هم می‌توانی از درس‌ها استفاده کنی.</p>
+      <div class="auth-tabs"><button type="button" class="auth-tab active" id="showLogin">ورود</button><button type="button" class="auth-tab" id="showSignup">ثبت‌نام</button></div>
+      <form id="loginForm" class="auth-form">
+        <label for="loginEmail">ایمیل</label><input id="loginEmail" type="email" autocomplete="email" required placeholder="name@example.com">
+        <label for="loginPassword">رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" required minlength="8" placeholder="حداقل ۸ نویسه">
+        <button class="btn primary" type="submit">ورود</button>
+      </form>
+      <form id="signupForm" class="auth-form" hidden>
+        <label for="signupName">نام نمایشی</label><input id="signupName" type="text" autocomplete="name" maxlength="60" required placeholder="نام شما">
+        <label for="signupEmail">ایمیل</label><input id="signupEmail" type="email" autocomplete="email" required placeholder="name@example.com">
+        <label for="signupPassword">رمز عبور</label><input id="signupPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="حداقل ۸ نویسه">
+        <button class="btn primary" type="submit">ساخت حساب</button>
+      </form>
+      <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
+      <p class="auth-guest">می‌توانی این پنجره را ببندی و به‌صورت مهمان ادامه بدهی.</p>
+    </section>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js?v=7" defer></script>
+  <script src="student-auth.js?v=1" defer></script>
 </body>
 </html>
