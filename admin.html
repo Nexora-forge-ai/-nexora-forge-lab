@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#09090d"><title>پنل مدیریت | NEXORA FORGE</title><link rel="stylesheet" href="style.css?v=academy-panel"></head>
+<body><header class="top"><div class="wrap nav"><a class="brand" href="index.html"><b>NEXORA</b> FORGE <span>/ ADMIN</span></a><nav class="links" style="display:flex"><a href="student.html">پنل دانش‌آموزی</a><a href="index.html">صفحه اصلی</a></nav></div></header>
+<main class="wrap" style="padding:36px 0 60px"><section class="student-box"><span class="eyebrow"><i></i> دسترسی محدود مدیر</span><h2 style="margin:10px 0">پنل مدیریت آکادمی</h2><p class="sub" id="adminIdentity">در حال بررسی مجوز...</p><p id="adminStatus" class="auth-message" role="status"></p></section>
+<section class="student-box" style="margin-top:16px"><h3>مدیریت تبلیغات و اطلاعیه‌ها</h3><p class="micro">تبلیغ پس از ذخیره فقط در جایگاه انتخاب‌شده نمایش داده می‌شود. برای انتشار، وضعیت فعال را روشن کن.</p>
+<form id="adForm" class="auth-form">
+<input type="hidden" id="adId">
+<label for="adTitle">عنوان تبلیغ / اطلاعیه</label><input id="adTitle" maxlength="120" required>
+<label for="adBody">متن</label><textarea id="adBody" rows="4" maxlength="1000" required></textarea>
+<label for="adImage">نشانی تصویر (اختیاری)</label><input id="adImage" type="url" placeholder="https://...">
+<label for="adTarget">نشانی مقصد (اختیاری)</label><input id="adTarget" type="url" placeholder="https://...">
+<label for="adPlacement">محل نمایش</label><select id="adPlacement"><option value="home">صفحه اصلی</option><option value="student">پنل دانش‌آموز</option><option value="both">هر دو</option></select>
+<label style="display:flex;gap:8px;align-items:center"><input id="adActive" type="checkbox" style="width:auto"> فعال و قابل نمایش</label>
+<div class="actions"><button class="btn primary" type="submit">ذخیره تبلیغ</button><button class="btn" id="clearAd" type="button">پاک‌کردن فرم</button></div></form>
+<div id="adList" style="margin-top:22px">در حال بارگذاری تبلیغات...</div></section>
+</main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="admin.js?v=1" defer></script></body></html>
