@@ -20,7 +20,8 @@ async function start(){
   db.from("academy_user_roles").select("role").eq("user_id",user.id)
  ]);
  for(const e of [pErr,prErr,cErr,lErr,qErr,qcErr,aErr,rErr])if(e)throw e;
- const done=(progress||[]).map(x=>x.lesson_id),total=(lessonRows||[]).length;
+ const validLessonIds=new Set((lessonRows||[]).map(x=>x.id));
+ const done=(progress||[]).map(x=>x.lesson_id).filter(id=>validLessonIds.has(id)),total=validLessonIds.size;
  $("welcome").textContent="خوش آمدی، "+(profile?.display_name||user.user_metadata?.display_name||user.email||"دانش‌آموز");
  let currentAvatarPath=profile?.avatar_path||null;
  const avatarPath=currentAvatarPath;
