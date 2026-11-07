@@ -153,7 +153,7 @@
       const { data, error } = await client.auth.signUp({
         email: $("signupEmail").value.trim(),
         password: $("signupPassword").value,
-        options: { data: { full_name: $("signupName").value.trim() } }
+        options: { data: { full_name: $("signupName").value.trim() }, emailRedirectTo: window.location.origin + window.location.pathname }
       });
       if (error) throw error;
       if (data.session) {
@@ -188,9 +188,6 @@
   });
   window.addEventListener("nexora:quiz-finished", event => saveQuizResult(event.detail).catch(console.error));
 
-  client.auth.onAuthStateChange((_event, session) => {
-    if (session?.user?.id !== currentUser?.id) applySession(session).catch(console.error);
-  });
   client.auth.getSession().then(({data, error}) => {
     if (error) throw error;
     applySession(data.session);
