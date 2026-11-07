@@ -177,7 +177,8 @@ async function loadPublishedCurriculum(){
   if(!window.supabase?.createClient)return;
   const db=window.supabase.createClient(
    "https://nutgcqhcgytjglyuvmla.supabase.co",
-   "sb_publishable_2HmqcVNPPPhULFeNPIbRlg_54LwTQEt"
+   "sb_publishable_2HmqcVNPPPhULFeNPIbRlg_54LwTQEt",
+   {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:"nexora-academy-public-catalog"}}
   );
   const [courseResult,lessonResult]=await Promise.all([
    db.from("academy_courses")
