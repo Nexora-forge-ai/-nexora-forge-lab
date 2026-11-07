@@ -526,6 +526,26 @@ with check (bucket_id='academy-media' and public.academy_is_admin());
 drop policy if exists "academy_media_admin_delete" on storage.objects;
 create policy "academy_media_admin_delete" on storage.objects
 for delete to authenticated using (bucket_id='academy-media' and public.academy_is_admin());
+ 
+-- Student profile photos: public read, each authenticated user manages only their own folder.
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+values('academy-avatars','academy-avatars',true,2097152,array['image/jpeg','image/png','image/webp'])
+on conflict (id) do update set public=true,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
+
+drop policy if exists "academy_avatars_public_read" on storage.objects;
+create policy "academy_avatars_public_read" on storage.objects
+for select to anon, authenticated using (bucket_id='academy-avatars');
+drop policy if exists "academy_avatars_owner_insert" on storage.objects;
+create policy "academy_avatars_owner_insert" on storage.objects
+for insert to authenticated with check (bucket_id='academy-avatars' and (storage.foldername(name))[1]=(select auth.uid())::text);
+drop policy if exists "academy_avatars_owner_update" on storage.objects;
+create policy "academy_avatars_owner_update" on storage.objects
+for update to authenticated using (bucket_id='academy-avatars' and (storage.foldername(name))[1]=(select auth.uid())::text)
+with check (bucket_id='academy-avatars' and (storage.foldername(name))[1]=(select auth.uid())::text);
+drop policy if exists "academy_avatars_owner_delete" on storage.objects;
+create policy "academy_avatars_owner_delete" on storage.objects
+for delete to authenticated using (bucket_id='academy-avatars' and (storage.foldername(name))[1]=(select auth.uid())::text);
+
 
 -- 13) Initial catalog: 3 languages, 3 levels, 9 independent courses.
 insert into public.academy_languages(id,name,slug,description,sort_order) values
