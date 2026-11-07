@@ -19,9 +19,13 @@ function setBusy(value){busy=value;document.querySelectorAll(".auth-form button"
 async function syncProgress(){
  if(!currentUser)return;
  const local=localDone();
- const {data,error}=await db.from("academy_lesson_progress").select("lesson_id").eq("user_id",currentUser.id);
- if(error)throw error;
- const merged=[...new Set([...local,...(data||[]).map(x=>x.lesson_id)])];
+ const [{data,error},{data:catalog,error:catalogError}]=await Promise.all([
+  db.from("academy_lesson_progress").select("lesson_id").eq("user_id",currentUser.id),
+  db.from("academy_lessons").select("id").eq("status","published")
+ ]);
+ if(error)throw error;if(catalogError)throw catalogError;
+ const validIds=new Set((catalog||[]).map(x=>x.id));
+ const merged=[...new Set([...(data||[]).map(x=>x.lesson_id),...local.filter(id=>validIds.has(id))])];
  if(merged.length){
   const rows=merged.map(lesson_id=>({user_id:currentUser.id,lesson_id,status:"completed",completed_at:new Date().toISOString()}));
   const {error:saveError}=await db.from("academy_lesson_progress").upsert(rows,{onConflict:"user_id,lesson_id"});
