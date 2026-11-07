@@ -1,12 +1,133 @@
 <!doctype html>
-<html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#09090d"><title>پنل مدیریت | NEXORA FORGE</title><link rel="stylesheet" href="style.css?v=academy-cms"></head>
-<body><header class="top"><div class="wrap nav"><a class="brand" href="index.html"><b>NEXORA</b> FORGE <span>/ ADMIN</span></a><nav class="links" style="display:flex"><a href="student.html">پنل دانش‌آموزی</a><a href="index.html">صفحه اصلی</a><button class="btn danger small" id="adminLogout" type="button">خروج</button></nav></div></header>
-<main class="wrap" style="padding:30px 0 60px">
-<section class="student-box"><span class="eyebrow"><i></i> دسترسی محدود مدیر</span><h2>پنل مدیریت آکادمی</h2><p class="sub" id="adminIdentity">در حال بررسی مجوز...</p><p id="adminStatus" class="auth-message" role="status"></p></section>
-<div id="adminWorkspace" hidden>
-<div class="cms-tabs"><button class="btn primary" data-admin-tab="courses">دوره‌ها</button><button class="btn" data-admin-tab="lessons">درس‌ها</button><button class="btn" data-admin-tab="students">دانش‌آموزان</button><button class="btn" data-admin-tab="ads">تبلیغات</button></div>
-<section class="student-box cms-panel" id="coursesPanel"><h3>مدیریت دوره‌ها</h3><form id="courseForm" class="auth-form"><input type="hidden" id="courseOldId"><label>شناسه انگلیسی (مثلاً html)</label><input id="courseId" pattern="[a-z0-9-]+" required maxlength="40"><label>نام دوره</label><input id="courseTitle" required maxlength="120"><label>توضیحات</label><textarea id="courseDescription" rows="3"></textarea><label>سطح</label><input id="courseLevel" value="مقدماتی"><label>ترتیب نمایش</label><input id="courseOrder" type="number" value="1"><label><input id="coursePublished" type="checkbox" checked> منتشرشده</label><div class="actions"><button class="btn primary">ذخیره دوره</button><button class="btn" type="button" id="courseReset">فرم جدید</button></div></form><div id="courseList"></div></section>
-<section class="student-box cms-panel" id="lessonsPanel" hidden><h3>مدیریت درس‌ها</h3><form id="lessonForm" class="auth-form"><input type="hidden" id="lessonOldId"><label>شناسه درس (مثلاً html:0)</label><input id="lessonId" required maxlength="80"><label>دوره</label><select id="lessonCourse"></select><label>عنوان درس</label><input id="lessonTitle" required maxlength="180"><label>محتوای درس (HTML ساده)</label><textarea id="lessonBody" rows="7" required></textarea><label>نمونه کد</label><textarea id="lessonCode" rows="7"></textarea><label>تمرین عملی</label><textarea id="lessonExercise" rows="3"></textarea><label>ترتیب</label><input id="lessonOrder" type="number" value="0"><label><input id="lessonPublished" type="checkbox" checked> منتشرشده</label><div class="actions"><button class="btn primary">ذخیره درس</button><button class="btn" type="button" id="lessonReset">فرم جدید</button></div></form><div id="lessonListAdmin"></div></section>
-<section class="student-box cms-panel" id="studentsPanel" hidden><h3>فهرست دانش‌آموزان</h3><p class="micro">فقط ایمیل، تاریخ ساخت حساب، تعداد درس‌های تکمیل‌شده و تعداد آزمون‌ها نمایش داده می‌شود؛ رمزها و داده‌های ورود قابل مشاهده نیستند.</p><button class="btn" id="refreshStudents">بارگذاری فهرست</button><div id="studentListAdmin"></div></section>
-<section class="student-box cms-panel" id="adsPanel" hidden><h3>مدیریت تبلیغات و اطلاعیه‌ها</h3><form id="adForm" class="auth-form"><input type="hidden" id="adId"><label>عنوان</label><input id="adTitle" maxlength="120" required><label>متن</label><textarea id="adBody" rows="4" maxlength="1000" required></textarea><label>نشانی تصویر</label><input id="adImage" type="url"><label>نشانی مقصد</label><input id="adTarget" type="url"><label>محل نمایش</label><select id="adPlacement"><option value="home">صفحه اصلی</option><option value="student">پنل دانش‌آموز</option><option value="both">هر دو</option></select><label><input id="adActive" type="checkbox"> فعال</label><div class="actions"><button class="btn primary">ذخیره تبلیغ</button><button class="btn" type="button" id="clearAd">فرم جدید</button></div></form><div id="adList"></div></section>
-</div></main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="admin.js?v=academy-cms" defer></script></body></html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#08080c">
+<meta name="description" content="پنل مدیریت آکادمی NEXORA FORGE">
+<title>مدیریت آکادمی | NEXORA FORGE</title>
+<link rel="stylesheet" href="style.css?v=academy-cms">
+<link rel="stylesheet" href="admin.css?v=forge-admin-1">
+</head>
+<body class="admin-page">
+<header class="admin-topbar">
+  <a class="admin-brand" href="index.html" aria-label="NEXORA FORGE">
+    <span class="admin-brand-mark">NF</span>
+    <span class="admin-brand-copy"><strong><b>NEXORA</b> FORGE</strong><small>ACADEMY CONTROL CENTER</small></span>
+  </a>
+  <div class="admin-top-actions">
+    <span class="admin-live"><i></i> محیط مدیریت</span>
+    <a class="admin-top-link" href="index.html">مشاهده سایت <span>↗</span></a>
+    <button class="btn danger small" id="adminLogout" type="button">خروج از حساب</button>
+  </div>
+</header>
+
+<main class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-side-heading"><span>WORKSPACE</span><small>مدیریت آکادمی</small></div>
+    <nav class="cms-tabs" aria-label="بخش‌های مدیریت">
+      <button class="admin-nav-item primary" data-admin-tab="overview" type="button"><span class="admin-nav-icon">⌂</span><span>نمای کلی</span></button>
+      <button class="admin-nav-item" data-admin-tab="courses" type="button"><span class="admin-nav-icon">▤</span><span>مدیریت دوره‌ها</span></button>
+      <button class="admin-nav-item" data-admin-tab="lessons" type="button"><span class="admin-nav-icon">⌘</span><span>مدیریت درس‌ها</span></button>
+      <button class="admin-nav-item" data-admin-tab="students" type="button"><span class="admin-nav-icon">♙</span><span>دانش‌آموزان</span></button>
+      <button class="admin-nav-item" data-admin-tab="ads" type="button"><span class="admin-nav-icon">▣</span><span>تبلیغات و اطلاعیه‌ها</span></button>
+    </nav>
+    <div class="admin-side-footer"><span class="admin-side-pulse"></span><div><strong>NEXORA FORGE</strong><small>BUILD THE FUTURE</small></div></div>
+  </aside>
+
+  <section class="admin-main">
+    <div class="admin-page-heading">
+      <div>
+        <span class="admin-kicker">NEXORA FORGE <i>/</i> ADMIN</span>
+        <h1>مرکز کنترل آکادمی</h1>
+        <p id="adminIdentity">در حال بررسی مجوز دسترسی مدیر...</p>
+      </div>
+      <div class="admin-heading-mark">FORGE<span>_</span></div>
+    </div>
+    <div id="adminStatus" class="admin-status auth-message" role="status" aria-live="polite"></div>
+
+    <div id="adminWorkspace" hidden>
+      <section class="admin-overview cms-panel" id="overviewPanel">
+        <div class="admin-welcome">
+          <div><span class="admin-kicker">CONTROL YOUR PLATFORM</span><h2>همه‌چیز از اینجا مدیریت می‌شود.</h2><p>دوره‌ها، محتوای آموزشی، دانش‌آموزان و پیام‌های آکادمی را در یک فضای یکپارچه کنترل کن.</p></div>
+          <div class="admin-welcome-symbol">N<span>F</span></div>
+        </div>
+        <div class="admin-metric-grid">
+          <article class="admin-metric"><span class="metric-icon">▤</span><small>محتوای آموزشی</small><strong>دوره‌ها و درس‌ها</strong><p>ساخت، ویرایش و انتشار محتوا</p></article>
+          <article class="admin-metric"><span class="metric-icon">♙</span><small>جامعه یادگیری</small><strong>دانش‌آموزان</strong><p>مشاهده فعالیت و پیشرفت کاربران</p></article>
+          <article class="admin-metric"><span class="metric-icon">▣</span><small>ارتباطات</small><strong>تبلیغات و اطلاعیه‌ها</strong><p>مدیریت پیام‌های قابل نمایش</p></article>
+        </div>
+        <div class="admin-shortcuts">
+          <div><span class="admin-kicker">QUICK ACCESS</span><h3>دسترسی سریع</h3><p>برای شروع، یکی از بخش‌های زیر را انتخاب کن.</p></div>
+          <button type="button" class="admin-shortcut" data-admin-tab="courses"><span>01</span><b>مدیریت دوره‌ها</b><i>←</i></button>
+          <button type="button" class="admin-shortcut" data-admin-tab="lessons"><span>02</span><b>مدیریت درس‌ها</b><i>←</i></button>
+          <button type="button" class="admin-shortcut" data-admin-tab="students"><span>03</span><b>فهرست دانش‌آموزان</b><i>←</i></button>
+          <button type="button" class="admin-shortcut" data-admin-tab="ads"><span>04</span><b>تبلیغات و اطلاعیه‌ها</b><i>←</i></button>
+        </div>
+        <div class="admin-note"><span>!</span><p><strong>یادآوری امنیتی:</strong> دسترسی این صفحه فقط با حسابی فعال می‌شود که نقش مدیر آن در پایگاه داده ثبت شده باشد. ثبت‌نام عادی به‌تنهایی مجوز مدیریت ایجاد نمی‌کند.</p></div>
+      </section>
+
+      <section class="student-box cms-panel admin-content-panel" id="coursesPanel" hidden>
+        <div class="admin-section-heading"><div><span class="admin-kicker">CONTENT MANAGEMENT</span><h2>مدیریت دوره‌ها</h2><p>دوره‌های آموزشی آکادمی را ایجاد و سازمان‌دهی کن.</p></div><span class="admin-section-number">01</span></div>
+        <form id="courseForm" class="auth-form admin-form"><input type="hidden" id="courseOldId">
+          <div class="admin-form-grid">
+            <div><label>شناسه انگلیسی (مثلاً html)</label><input id="courseId" pattern="[a-z0-9-]+" required maxlength="40" placeholder="html"></div>
+            <div><label>نام دوره</label><input id="courseTitle" required maxlength="120" placeholder="آموزش HTML"></div>
+            <div class="span-2"><label>توضیحات دوره</label><textarea id="courseDescription" rows="3" placeholder="توضیح کوتاه درباره دوره"></textarea></div>
+            <div><label>سطح</label><input id="courseLevel" value="مقدماتی"></div>
+            <div><label>ترتیب نمایش</label><input id="courseOrder" type="number" value="1"></div>
+          </div>
+          <label class="admin-check"><input id="coursePublished" type="checkbox" checked> انتشار دوره برای دانش‌آموزان</label>
+          <div class="actions"><button class="btn primary">ذخیره دوره</button><button class="btn" type="button" id="courseReset">فرم جدید</button></div>
+        </form>
+        <div class="admin-list-heading"><h3>دوره‌های ثبت‌شده</h3><span>فهرست دوره‌ها</span></div><div id="courseList" class="admin-record-list"></div>
+      </section>
+
+      <section class="student-box cms-panel admin-content-panel" id="lessonsPanel" hidden>
+        <div class="admin-section-heading"><div><span class="admin-kicker">LESSON STUDIO</span><h2>مدیریت درس‌ها</h2><p>محتوای آموزشی و تمرین‌های هر درس را ویرایش کن.</p></div><span class="admin-section-number">02</span></div>
+        <form id="lessonForm" class="auth-form admin-form"><input type="hidden" id="lessonOldId">
+          <div class="admin-form-grid">
+            <div><label>شناسه درس (مثلاً html:0)</label><input id="lessonId" required maxlength="80" placeholder="html:0"></div>
+            <div><label>دوره مربوطه</label><select id="lessonCourse"></select></div>
+            <div class="span-2"><label>عنوان درس</label><input id="lessonTitle" required maxlength="180" placeholder="عنوان درس"></div>
+            <div class="span-2"><label>محتوای درس (HTML ساده)</label><textarea id="lessonBody" rows="7" required placeholder="متن و محتوای درس"></textarea></div>
+            <div class="span-2"><label>نمونه کد</label><textarea id="lessonCode" rows="7" placeholder="کد نمونه"></textarea></div>
+            <div class="span-2"><label>تمرین عملی</label><textarea id="lessonExercise" rows="3" placeholder="تمرین این درس"></textarea></div>
+            <div><label>ترتیب نمایش</label><input id="lessonOrder" type="number" value="0"></div>
+          </div>
+          <label class="admin-check"><input id="lessonPublished" type="checkbox" checked> انتشار درس برای دانش‌آموزان</label>
+          <div class="actions"><button class="btn primary">ذخیره درس</button><button class="btn" type="button" id="lessonReset">فرم جدید</button></div>
+        </form>
+        <div class="admin-list-heading"><h3>درس‌های ثبت‌شده</h3><span>فهرست محتوا</span></div><div id="lessonListAdmin" class="admin-record-list"></div>
+      </section>
+
+      <section class="student-box cms-panel admin-content-panel" id="studentsPanel" hidden>
+        <div class="admin-section-heading"><div><span class="admin-kicker">LEARNER MANAGEMENT</span><h2>دانش‌آموزان</h2><p>نمای کلی فعالیت آموزشی حساب‌های ثبت‌نام‌شده.</p></div><span class="admin-section-number">03</span></div>
+        <div class="admin-privacy-note">اطلاعات حساس مانند رمز عبور و توکن‌های ورود در این بخش نمایش داده نمی‌شوند.</div>
+        <button class="btn primary" id="refreshStudents" type="button">بارگذاری فهرست دانش‌آموزان</button><div id="studentListAdmin" class="admin-record-list"></div>
+      </section>
+
+      <section class="student-box cms-panel admin-content-panel" id="adsPanel" hidden>
+        <div class="admin-section-heading"><div><span class="admin-kicker">CAMPAIGNS & ANNOUNCEMENTS</span><h2>تبلیغات و اطلاعیه‌ها</h2><p>پیام‌هایی که در صفحه اصلی یا پنل دانش‌آموز نمایش داده می‌شوند.</p></div><span class="admin-section-number">04</span></div>
+        <form id="adForm" class="auth-form admin-form">
+          <input type="hidden" id="adId">
+          <div class="admin-form-grid">
+            <div class="span-2"><label>عنوان</label><input id="adTitle" maxlength="120" required placeholder="عنوان پیام"></div>
+            <div class="span-2"><label>متن پیام</label><textarea id="adBody" rows="4" maxlength="1000" required placeholder="متن تبلیغ یا اطلاعیه"></textarea></div>
+            <div><label>نشانی تصویر</label><input id="adImage" type="url" placeholder="https://..."></div>
+            <div><label>نشانی مقصد</label><input id="adTarget" type="url" placeholder="https://..."></div>
+            <div><label>محل نمایش</label><select id="adPlacement"><option value="home">صفحه اصلی</option><option value="student">پنل دانش‌آموز</option><option value="both">هر دو</option></select></div>
+          </div>
+          <label class="admin-check"><input id="adActive" type="checkbox"> فعال‌سازی پیام</label>
+          <div class="actions"><button class="btn primary">ذخیره پیام</button><button class="btn" type="button" id="clearAd">فرم جدید</button></div>
+        </form>
+        <div class="admin-list-heading"><h3>پیام‌های ثبت‌شده</h3><span>فهرست تبلیغات</span></div><div id="adList" class="admin-record-list"></div>
+      </section>
+    </div>
+    <footer class="admin-footer"><span>© NEXORA FORGE</span><b>BUILD THE FUTURE</b><span>ACADEMY ADMIN</span></footer>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="admin.js?v=forge-admin-1" defer></script>
+</body>
+</html>
