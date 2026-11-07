@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const URL="https://ufranjjvhmsrkoxtlqcl.supabase.co";
+const URL="https://vfatmvmgtgpmnxqbgszm.supabase.co";
 const KEY="sb_publishable_PiggBtDvCsSOwiT62J21Ag_fJA7M_v_";
 const client=window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=id=>document.getElementById(id);
