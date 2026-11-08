@@ -6,3 +6,15 @@ verify_jwt = true
 
 [functions.student-password-reset]
 verify_jwt = false
+
+[functions.student-register]
+verify_jwt = false
+
+[functions.student-change-code]
+verify_jwt = true
+
+[functions.student-change-password]
+verify_jwt = true
+
+[functions.admin-reset-student-password]
+verify_jwt = true
