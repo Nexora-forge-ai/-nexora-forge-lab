@@ -52,7 +52,7 @@ function renderStudents(){
   const action=status==="blocked"?"مسدودسازی":"فعال‌سازی";
   if(!confirm(action+" حساب این دانش‌آموز انجام شود؟"))return;
   b.disabled=true;
-  try{const {data,error}=await db.functions.invoke("academy-student-account",{body:{user_id,status}});if(error)throw error;if(data?.error)throw Error(data.error);say(status==="blocked"?"حساب دانش‌آموز مسدود شد.":"حساب دانش‌آموز فعال شد.",true);await loadStudents();}
+  try{const {data,error}=await db.functions.invoke("academy-student-account",{body:{user_id,status}});if(error)throw error;if(data?.error)throw Error(data.error);say(data?.warning|| (status==="blocked"?"حساب دانش‌آموز مسدود شد.":"حساب دانش‌آموز فعال شد."),!data?.warning);await loadStudents();}
   catch(e){say("تغییر وضعیت انجام نشد: "+e.message);}
   finally{b.disabled=false;}
  });
