@@ -41,12 +41,12 @@ async function syncProgress(){
 }
 async function renderDashboard(){
  if(!currentUser||!panel)return;
- const [{data:profile,error:profileError},{data:progress,error:progressError},{data:lessons,error:lessonsError},{data:courses,error:coursesError},{count:quizCount,error:quizError}]=await Promise.all([
+ const [{data:profile,error:profileError},{data:progress,error:progressError},{data:lessons,error:lessonsError},{data:courses,error:coursesError},{data:quizAttempts,count:quizCount,error:quizError}]=await Promise.all([
   db.from("academy_profiles").select("display_name,avatar_path").eq("user_id",currentUser.id).maybeSingle(),
   db.from("academy_lesson_progress").select("lesson_id").eq("user_id",currentUser.id).eq("status","completed"),
   db.from("academy_lessons").select("id,course_id").eq("status","published"),
   db.from("academy_courses").select("id,title").eq("status","published"),
-  db.from("academy_quiz_attempts").select("id",{count:"exact",head:true}).eq("user_id",currentUser.id)
+  db.from("academy_quiz_attempts").select("score,max_score,percent,submitted_at",{count:"exact"}).eq("user_id",currentUser.id).order("submitted_at",{ascending:false}).limit(5)
  ]);
  for(const e of [profileError,progressError,lessonsError,coursesError,quizError])if(e)throw e;
  const validLessonIds=new Set((lessons||[]).map(x=>x.id));
@@ -59,7 +59,7 @@ async function renderDashboard(){
   const ids=(lessons||[]).filter(l=>l.course_id===c.id).map(l=>l.id),n=ids.filter(id=>done.includes(id)).length,pct=ids.length?Math.round(n/ids.length*100):0;
   return '<div class="student-course-row"><div class="student-course-title"><strong>'+safeText(c.title)+'</strong><span>'+n.toLocaleString("fa-IR")+' از '+ids.length.toLocaleString("fa-IR")+' درس</span></div><div class="student-course-track"><span style="width:'+pct+'%"></span></div></div>';
  }).join("")||"هنوز دوره منتشرشده‌ای وجود ندارد.";
- $("studentQuizHistory").textContent="آزمون‌های تعاملی فعلی در مرورگر اجرا می‌شوند و هنوز به سامانه ثبت نمره امن متصل نشده‌اند؛ بنابراین نتیجه‌ای در سوابق ابری ثبت نمی‌شود.";
+ $("studentQuizHistory").innerHTML=quizAttempts?.length?quizAttempts.map(q=>'<div class="student-quiz-row">امتیاز: <strong>'+q.score+' از '+q.max_score+'</strong> · '+q.percent+'٪ · '+new Date(q.submitted_at).toLocaleDateString("fa-IR")+'</div>').join(""):"هنوز آزمون نمره‌داری ثبت نشده است.";
 }
 async function applySession(session){
  currentUser=session?.user||null;
