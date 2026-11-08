@@ -244,7 +244,7 @@ declare
 begin
   if v_user is null then raise exception 'AUTH_REQUIRED'; end if;
   if not public.academy_is_active_user() then raise exception 'ACCOUNT_BLOCKED'; end if;
-  if jsonb_typeof(p_answers) <> 'array' then raise exception 'INVALID_ANSWERS'; end if;
+  if coalesce(jsonb_typeof(p_answers),'null') <> 'array' then raise exception 'INVALID_ANSWERS'; end if;
   if jsonb_array_length(p_answers)>100 then raise exception 'TOO_MANY_ANSWERS'; end if;
   if not exists(select 1 from public.academy_quizzes where id=p_quiz_id and status='published') then
     raise exception 'QUIZ_UNAVAILABLE';
@@ -260,14 +260,349 @@ begin
   if exists(
     select 1 from jsonb_array_elements(p_answers) as a(item)
     where jsonb_typeof(item)<>'object'
-       or coalesce(item->>'question_id','') !~* '^[0-9a-f-]{36}$'
-       or coalesce(item->>'option_id','') !~* '^[0-9a-f-]{36}$'
-       or not exists(
-          select 1 from public.academy_quiz_questions q
-          join public.academy_quiz_options o on o.question_id=q.id
-          where q.id=(item->>'question_id')::uuid and q.quiz_id=p_quiz_id
-            and o.id=(item->>'option_id')::uuid
-       )
+       or coalesce(item->>'question_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+
+  for q in select id,points from public.academy_quiz_questions where quiz_id=p_quiz_id loop
+    v_max:=v_max+q.points;
+    select (item->>'option_id')::uuid into v_selected
+    from jsonb_array_elements(p_answers) as a(item)
+    where item->>'question_id'=q.id::text;
+    select option_id into v_correct from public.academy_quiz_correct_answers where question_id=q.id;
+    if v_correct is null then raise exception 'QUIZ_KEY_MISSING'; end if;
+    v_awarded:=case when v_selected=v_correct then q.points else 0 end;
+    v_score:=v_score+v_awarded;
+  end loop;
+  if v_max<=0 then raise exception 'QUIZ_HAS_NO_POINTS'; end if;
+  v_percent:=round((v_score/v_max)*100)::integer;
+
+  insert into public.academy_quiz_attempts(id,quiz_id,user_id,score,max_score,percent,passed)
+  values(v_attempt,p_quiz_id,v_user,v_score,v_max,v_percent,v_percent>=v_pass);
+
+  for q in select id from public.academy_quiz_questions where quiz_id=p_quiz_id loop
+    select (item->>'option_id')::uuid into v_selected
+    from jsonb_array_elements(p_answers) as a(item)
+    where item->>'question_id'=q.id::text;
+    select option_id into v_correct from public.academy_quiz_correct_answers where question_id=q.id;
+    insert into public.academy_quiz_answers(attempt_id,question_id,selected_option_id,is_correct,awarded_points)
+    values(v_attempt,q.id,v_selected,v_selected=v_correct,
+      case when v_selected=v_correct then (select points from public.academy_quiz_questions where id=q.id) else 0 end);
+  end loop;
+  return jsonb_build_object('attempt_id',v_attempt,'score',v_score,'max_score',v_max,'percent',v_percent,'passed',v_percent>=v_pass);
+end;
+$$;
+revoke all on function public.academy_submit_quiz(uuid,jsonb) from public,anon;
+grant execute on function public.academy_submit_quiz(uuid,jsonb) to authenticated;
+
+-- One starter quiz, with answer keys kept out of public read policies.
+insert into public.academy_quizzes(id,course_id,title,description,pass_percent,status)
+values('90000000-0000-4000-8000-000000000001','html','آزمون آغازین آکادمی','۹ پرسش پایه از HTML، CSS و JavaScript',60,'published')
+on conflict(id) do update set title=excluded.title,description=excluded.description,pass_percent=excluded.pass_percent,status='published';
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000001','90000000-0000-4000-8000-000000000001','کدام تگ برای عنوان اصلی صفحه استفاده می‌شود؟','h1 عنوان اصلی و مهم صفحه را مشخص می‌کند.',1,1)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000001','<p>',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000001','<h1>',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000003','91000000-0000-4000-8000-000000000001','<img>',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000002','90000000-0000-4000-8000-000000000001','برای ساخت پیوند در HTML از کدام تگ استفاده می‌شود؟','تگ a همراه ویژگی href یک پیوند ایجاد می‌کند.',1,2)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000004','91000000-0000-4000-8000-000000000002','<a>',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000004') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000005','91000000-0000-4000-8000-000000000002','<link>',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000006','91000000-0000-4000-8000-000000000002','<button>',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000003','90000000-0000-4000-8000-000000000001','ویژگی alt در تصویر چه کاربردی دارد؟','alt توضیح متنی تصویر را برای دسترس‌پذیری و زمانی که تصویر بارگذاری نمی‌شود فراهم می‌کند.',1,3)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000007','91000000-0000-4000-8000-000000000003','تغییر اندازه تصویر',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000008','91000000-0000-4000-8000-000000000003','متن جایگزین تصویر',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000003','92000000-0000-4000-8000-000000000008') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000009','91000000-0000-4000-8000-000000000003','تعیین رنگ تصویر',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000004','90000000-0000-4000-8000-000000000001','کدام ویژگی در CSS رنگ متن را تعیین می‌کند؟','ویژگی color رنگ متن را تعیین می‌کند.',1,4)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000010','91000000-0000-4000-8000-000000000004','font-size',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000011','91000000-0000-4000-8000-000000000004','background',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000012','91000000-0000-4000-8000-000000000004','color',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000004','92000000-0000-4000-8000-000000000012') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000005','90000000-0000-4000-8000-000000000001','برای چیدمان انعطاف‌پذیر یک‌بعدی معمولاً از چه چیزی استفاده می‌کنیم؟','Flexbox برای چیدمان انعطاف‌پذیر در یک محور مناسب است.',1,5)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000013','91000000-0000-4000-8000-000000000005','display: flex',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000005','92000000-0000-4000-8000-000000000013') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000014','91000000-0000-4000-8000-000000000005','font-style',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000015','91000000-0000-4000-8000-000000000005','text-align',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000006','90000000-0000-4000-8000-000000000001','کدام ابزار CSS برای اعمال سبک در اندازه‌های مختلف صفحه استفاده می‌شود؟','Media Query امکان تعریف سبک‌های وابسته به اندازه صفحه یا ویژگی‌های دستگاه را می‌دهد.',1,6)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000016','91000000-0000-4000-8000-000000000006','@media',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000006','92000000-0000-4000-8000-000000000016') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000017','91000000-0000-4000-8000-000000000006','@font-face',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000018','91000000-0000-4000-8000-000000000006','@import',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000007','90000000-0000-4000-8000-000000000001','برای تعریف متغیری که دوباره مقداردهی نمی‌شود از کدام کلمه استفاده می‌کنیم؟','const برای متغیری است که دوباره به آن مقدار نسبت داده نمی‌شود.',1,7)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000019','91000000-0000-4000-8000-000000000007','const',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000007','92000000-0000-4000-8000-000000000019') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000020','91000000-0000-4000-8000-000000000007','repeat',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000021','91000000-0000-4000-8000-000000000007','style',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000008','90000000-0000-4000-8000-000000000001','برای شنیدن رویداد کلیک در JavaScript از کدام متد استفاده می‌شود؟','addEventListener شنونده رویداد را به عنصر متصل می‌کند.',1,8)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000022','91000000-0000-4000-8000-000000000008','querySelector',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000023','91000000-0000-4000-8000-000000000008','addEventListener',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000008','92000000-0000-4000-8000-000000000023') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000024','91000000-0000-4000-8000-000000000008','innerHTML',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000009','90000000-0000-4000-8000-000000000001','اندیس اولین عضو آرایه در JavaScript چند است؟','اندیس آرایه‌ها در JavaScript از صفر شروع می‌شود.',1,9)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000025','91000000-0000-4000-8000-000000000009','۱',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000026','91000000-0000-4000-8000-000000000009','۰',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000009','92000000-0000-4000-8000-000000000026') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000027','91000000-0000-4000-8000-000000000009','-۱',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+
+-- Remove retired starter quiz records only for this fixed quiz's question set is intentionally avoided.
+commit;
+
+       or coalesce(item->>'option_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+
+  for q in select id,points from public.academy_quiz_questions where quiz_id=p_quiz_id loop
+    v_max:=v_max+q.points;
+    select (item->>'option_id')::uuid into v_selected
+    from jsonb_array_elements(p_answers) as a(item)
+    where item->>'question_id'=q.id::text;
+    select option_id into v_correct from public.academy_quiz_correct_answers where question_id=q.id;
+    if v_correct is null then raise exception 'QUIZ_KEY_MISSING'; end if;
+    v_awarded:=case when v_selected=v_correct then q.points else 0 end;
+    v_score:=v_score+v_awarded;
+  end loop;
+  if v_max<=0 then raise exception 'QUIZ_HAS_NO_POINTS'; end if;
+  v_percent:=round((v_score/v_max)*100)::integer;
+
+  insert into public.academy_quiz_attempts(id,quiz_id,user_id,score,max_score,percent,passed)
+  values(v_attempt,p_quiz_id,v_user,v_score,v_max,v_percent,v_percent>=v_pass);
+
+  for q in select id from public.academy_quiz_questions where quiz_id=p_quiz_id loop
+    select (item->>'option_id')::uuid into v_selected
+    from jsonb_array_elements(p_answers) as a(item)
+    where item->>'question_id'=q.id::text;
+    select option_id into v_correct from public.academy_quiz_correct_answers where question_id=q.id;
+    insert into public.academy_quiz_answers(attempt_id,question_id,selected_option_id,is_correct,awarded_points)
+    values(v_attempt,q.id,v_selected,v_selected=v_correct,
+      case when v_selected=v_correct then (select points from public.academy_quiz_questions where id=q.id) else 0 end);
+  end loop;
+  return jsonb_build_object('attempt_id',v_attempt,'score',v_score,'max_score',v_max,'percent',v_percent,'passed',v_percent>=v_pass);
+end;
+$$;
+revoke all on function public.academy_submit_quiz(uuid,jsonb) from public,anon;
+grant execute on function public.academy_submit_quiz(uuid,jsonb) to authenticated;
+
+-- One starter quiz, with answer keys kept out of public read policies.
+insert into public.academy_quizzes(id,course_id,title,description,pass_percent,status)
+values('90000000-0000-4000-8000-000000000001','html','آزمون آغازین آکادمی','۹ پرسش پایه از HTML، CSS و JavaScript',60,'published')
+on conflict(id) do update set title=excluded.title,description=excluded.description,pass_percent=excluded.pass_percent,status='published';
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000001','90000000-0000-4000-8000-000000000001','کدام تگ برای عنوان اصلی صفحه استفاده می‌شود؟','h1 عنوان اصلی و مهم صفحه را مشخص می‌کند.',1,1)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000001','<p>',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000001','<h1>',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000002') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000003','91000000-0000-4000-8000-000000000001','<img>',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000002','90000000-0000-4000-8000-000000000001','برای ساخت پیوند در HTML از کدام تگ استفاده می‌شود؟','تگ a همراه ویژگی href یک پیوند ایجاد می‌کند.',1,2)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000004','91000000-0000-4000-8000-000000000002','<a>',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000004') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000005','91000000-0000-4000-8000-000000000002','<link>',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000006','91000000-0000-4000-8000-000000000002','<button>',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000003','90000000-0000-4000-8000-000000000001','ویژگی alt در تصویر چه کاربردی دارد؟','alt توضیح متنی تصویر را برای دسترس‌پذیری و زمانی که تصویر بارگذاری نمی‌شود فراهم می‌کند.',1,3)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000007','91000000-0000-4000-8000-000000000003','تغییر اندازه تصویر',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000008','91000000-0000-4000-8000-000000000003','متن جایگزین تصویر',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000003','92000000-0000-4000-8000-000000000008') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000009','91000000-0000-4000-8000-000000000003','تعیین رنگ تصویر',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000004','90000000-0000-4000-8000-000000000001','کدام ویژگی در CSS رنگ متن را تعیین می‌کند؟','ویژگی color رنگ متن را تعیین می‌کند.',1,4)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000010','91000000-0000-4000-8000-000000000004','font-size',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000011','91000000-0000-4000-8000-000000000004','background',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000012','91000000-0000-4000-8000-000000000004','color',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000004','92000000-0000-4000-8000-000000000012') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000005','90000000-0000-4000-8000-000000000001','برای چیدمان انعطاف‌پذیر یک‌بعدی معمولاً از چه چیزی استفاده می‌کنیم؟','Flexbox برای چیدمان انعطاف‌پذیر در یک محور مناسب است.',1,5)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000013','91000000-0000-4000-8000-000000000005','display: flex',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000005','92000000-0000-4000-8000-000000000013') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000014','91000000-0000-4000-8000-000000000005','font-style',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000015','91000000-0000-4000-8000-000000000005','text-align',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000006','90000000-0000-4000-8000-000000000001','کدام ابزار CSS برای اعمال سبک در اندازه‌های مختلف صفحه استفاده می‌شود؟','Media Query امکان تعریف سبک‌های وابسته به اندازه صفحه یا ویژگی‌های دستگاه را می‌دهد.',1,6)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000016','91000000-0000-4000-8000-000000000006','@media',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000006','92000000-0000-4000-8000-000000000016') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000017','91000000-0000-4000-8000-000000000006','@font-face',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000018','91000000-0000-4000-8000-000000000006','@import',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000007','90000000-0000-4000-8000-000000000001','برای تعریف متغیری که دوباره مقداردهی نمی‌شود از کدام کلمه استفاده می‌کنیم؟','const برای متغیری است که دوباره به آن مقدار نسبت داده نمی‌شود.',1,7)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000019','91000000-0000-4000-8000-000000000007','const',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000007','92000000-0000-4000-8000-000000000019') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000020','91000000-0000-4000-8000-000000000007','repeat',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000021','91000000-0000-4000-8000-000000000007','style',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000008','90000000-0000-4000-8000-000000000001','برای شنیدن رویداد کلیک در JavaScript از کدام متد استفاده می‌شود؟','addEventListener شنونده رویداد را به عنصر متصل می‌کند.',1,8)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000022','91000000-0000-4000-8000-000000000008','querySelector',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000023','91000000-0000-4000-8000-000000000008','addEventListener',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000008','92000000-0000-4000-8000-000000000023') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000024','91000000-0000-4000-8000-000000000008','innerHTML',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_questions(id,quiz_id,question_text,explanation,points,sort_order)
+values('91000000-0000-4000-8000-000000000009','90000000-0000-4000-8000-000000000001','اندیس اولین عضو آرایه در JavaScript چند است؟','اندیس آرایه‌ها در JavaScript از صفر شروع می‌شود.',1,9)
+on conflict(id) do update set question_text=excluded.question_text,explanation=excluded.explanation,points=excluded.points,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000025','91000000-0000-4000-8000-000000000009','۱',1)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000026','91000000-0000-4000-8000-000000000009','۰',2)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+insert into public.academy_quiz_correct_answers(question_id,option_id)
+values('91000000-0000-4000-8000-000000000009','92000000-0000-4000-8000-000000000026') on conflict(question_id) do update set option_id=excluded.option_id;
+insert into public.academy_quiz_options(id,question_id,option_text,sort_order)
+values('92000000-0000-4000-8000-000000000027','91000000-0000-4000-8000-000000000009','-۱',3)
+on conflict(id) do update set option_text=excluded.option_text,sort_order=excluded.sort_order;
+
+-- Remove retired starter quiz records only for this fixed quiz's question set is intentionally avoided.
+commit;
+
+  ) then raise exception 'INVALID_ANSWER_FORMAT'; end if;
+  if exists(
+    select 1 from jsonb_array_elements(p_answers) as a(item)
+    where not exists(
+      select 1 from public.academy_quiz_questions q
+      join public.academy_quiz_options o on o.question_id=q.id
+      where q.id=(item->>'question_id')::uuid and q.quiz_id=p_quiz_id
+        and o.id=(item->>'option_id')::uuid
+    )
   ) then raise exception 'INVALID_ANSWER_REFERENCE'; end if;
 
   for q in select id,points from public.academy_quiz_questions where quiz_id=p_quiz_id loop
