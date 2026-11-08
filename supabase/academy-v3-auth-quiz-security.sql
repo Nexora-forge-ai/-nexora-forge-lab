@@ -254,7 +254,9 @@ begin
   select count(distinct item->>'question_id') into v_submitted_count
   from jsonb_array_elements(p_answers) as a(item)
   where jsonb_typeof(item)='object' and item ? 'question_id' and item ? 'option_id';
-  if v_question_count=0 or v_question_count<>v_submitted_count then raise exception 'INCOMPLETE_ANSWERS'; end if;
+  if v_question_count=0 or v_question_count<>v_submitted_count or jsonb_array_length(p_answers)<>v_question_count then
+    raise exception 'INCOMPLETE_OR_DUPLICATE_ANSWERS';
+  end if;
   if exists(
     select 1 from jsonb_array_elements(p_answers) as a(item)
     where jsonb_typeof(item)<>'object'
