@@ -8,14 +8,21 @@ const corsHeaders = {
 };
 const json = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), { status, headers: corsHeaders });
+const readKey = (pluralName: string, legacyName: string) => {
+  const raw = Deno.env.get(pluralName);
+  if (raw) {
+    try { const keys = JSON.parse(raw); if (typeof keys.default === "string") return keys.default; } catch { /* legacy fallback */ }
+  }
+  return Deno.env.get(legacyName) ?? "";
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
   const url = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const anonKey = readKey("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY");
+  const serviceKey = readKey("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !anonKey || !serviceKey) return json(500, { error: "Server configuration is incomplete" });
 
   const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
