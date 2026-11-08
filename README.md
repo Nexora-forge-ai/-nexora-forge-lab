@@ -6,12 +6,15 @@
 
 - `index.html`: صفحه اصلی، فهرست دوره‌ها، کلاس درس و محیط تمرین.
 - `app.js`: نمایش دوره‌ها و درس‌ها از Supabase، پیگیری محلی پیشرفت و محیط تمرین محدودشده.
-- `student-auth.js`: ثبت‌نام/ورود ایمیلی و همگام‌سازی پیشرفت.
+- `student-auth.js`: ثبت‌نام با ایمیل، شناسه ۱۲ کاراکتری و همگام‌سازی پیشرفت.
+- `supabase/functions/student-login`: ورود امن با شناسه دانش‌آموزی.
+- `supabase/functions/student-password-reset`: بازیابی رمز با شناسه دانش‌آموزی.
+- `supabase/functions/academy-student-account`: فعال‌سازی و مسدودسازی حساب توسط مدیر.
 - `student.html` و `student-panel.js`: پنل دانش‌آموز و عکس پروفایل.
 - `admin.html` و `admin.js`: پنل مدیریت دوره‌ها، درس‌ها، دانش‌آموزان و اطلاعیه‌ها.
 - `style.css` و `admin.css`: ظاهر واکنش‌گرا.
-- `supabase/academy-v2-final.sql`: ساخت جداول، RLS، نقش‌ها، توابع امن و Storage.
-- `supabase/academy-curriculum-324.sql`: کاتالوگ ۳۲۴ درس در ۹ دوره.
+- `supabase/academy-install-complete.sql`: نصب یک‌مرحله‌ای پایگاه داده، سیاست‌های امنیتی، شناسه‌ها، مدیریت حساب و آزمون آغازین به‌همراه ۳۲۴ درس.
+- `supabase/academy-v3-auth-quiz-security.sql`: وصله جداگانه برای نصب‌های قبلی که فایل پایه و برنامه درسی را قبلاً اجرا کرده‌اند.
 
 ## راه‌اندازی Supabase
 
@@ -22,14 +25,40 @@
 
 راه‌اندازی پایگاه داده:
 
-1. در SQL Editor پروژه جدید، فایل `supabase/academy-install-complete.sql` را باز کن و یک‌بار اجرا کن. این فایل هر دو مرحله را در یک تراکنش انجام می‌دهد: ساخت جداول، RLS، نقش‌ها، Storage خصوصی عکس پروفایل و ورود ۳۲۴ درس.
+1. در SQL Editor پروژه جدید، فایل `supabase/academy-install-complete.sql` را باز کن و یک‌بار اجرا کن. این فایل در یک تراکنش ساختار پایگاه داده، RLS، Storage خصوصی عکس پروفایل، شناسه دانش‌آموزی، محدودیت ورود، وضعیت حساب، آزمون نمره‌دار امن و ۳۲۴ درس را نصب می‌کند.
 2. از صفحه اصلی یک حساب مدیر با ایمیل واقعی بساز و ایمیل را تأیید کن.
 3. در SQL Editor، ایمیل مدیر را در دستور bootstrap انتهای فایل نصب جایگزین کن و همان دستور را جداگانه اجرا کن. نقش `super_admin` نباید از فرم ثبت‌نام عمومی قابل انتخاب باشد.
 4. در تنظیمات Authentication، آدرس دامنه واقعی سایت را در Site URL و Redirect URLs ثبت کن.
 
-اگر خواستی نصب را جداگانه انجام بدهی، دو فایل `academy-v2-final.sql` و سپس `academy-curriculum-324.sql` را به همین ترتیب اجرا کن.
+اگر فایل پایه و ۳۲۴ درس را قبلاً نصب کرده‌ای، فقط فایل `academy-v3-auth-quiz-security.sql` را یک‌بار اجرا کن. فایل نصب کامل را روی پایگاه داده‌ای که قبلاً نصب شده دوباره اجرا نکن.
 
 **هشدار:** تا وقتی فایل نصب با موفقیت اجرا نشده، انتظار کارکرد کامل ثبت‌نام، مدیریت، همگام‌سازی پیشرفت و عکس پروفایل را نداشته باش.
+
+
+## انتشار Edge Functions (الزامی برای شناسه، بازیابی و مسدودسازی)
+
+این توابع باید در پروژه Supabase با ref برابر `nutgcqhcgytjglyuvmla` منتشر شوند. از ریشه مخزن و با Supabase CLI:
+
+```bash
+supabase login
+supabase link --project-ref nutgcqhcgytjglyuvmla
+supabase functions deploy student-login --no-verify-jwt
+supabase functions deploy student-password-reset --no-verify-jwt
+supabase functions deploy academy-student-account
+```
+
+کلیدهای `SUPABASE_URL`، `SUPABASE_ANON_KEY` و `SUPABASE_SERVICE_ROLE_KEY` باید در محیط Edge Functions پروژه Supabase باشند؛ کلید service role را هرگز در GitHub یا فایل‌های frontend قرار نده. این متغیرها معمولاً به‌صورت پیش‌فرض در محیط Edge Functions موجودند.
+
+## تنظیم SMTP برای ایمیل تأیید و بازیابی
+
+1. در Supabase Dashboard به Authentication → SMTP Settings برو.
+2. یک سرویس‌دهنده ایمیل تراکنشی انتخاب کن و دامنه فرستنده را در آن تأیید کن.
+3. رکوردهای DNS اعلام‌شده توسط سرویس‌دهنده (SPF و DKIM و در صورت نیاز DMARC) را در DNS دامنه ثبت کن.
+4. SMTP Host، Port، Username، Password و Sender email را فقط در تنظیمات SMTP داشبورد وارد کن.
+5. در Authentication → URL Configuration، مقدار Site URL و Redirect URLs را با دامنه واقعی سایت تنظیم کن.
+6. ثبت‌نام جدید، تأیید ایمیل و بازیابی رمز را با یک صندوق ایمیل واقعی آزمایش کن.
+
+بدون دامنه فرستنده و اعتبارنامه سرویس‌دهنده، SMTP واقعی قابل فعال‌سازی یا آزمایش نیست. از SMTP آزمایشی پیش‌فرض Supabase برای انتشار عمومی استفاده نکن.
 
 ## انتشار با Cloudflare Pages
 
@@ -45,7 +74,10 @@
 ## امکانات فعلی کد
 
 - مشاهده دوره‌ها و درس‌های منتشرشده از Supabase.
-- ثبت‌نام و ورود با ایمیل و رمز عبور Supabase Auth.
+- ثبت‌نام با ایمیل تأییدشونده و شناسه ۱۲ کاراکتری؛ ورود دانش‌آموز با شناسه و رمز از Edge Function محدودشده.
+- بازیابی رمز با شناسه و ارسال ایمیل از مسیر امن.
+- فعال‌سازی و مسدودسازی دانش‌آموز از پنل مدیریت.
+- آزمون آغازین ۹ سؤالی با تصحیح سمت پایگاه داده و ذخیره نمره.
 - همگام‌سازی تکمیل درس‌ها با `academy_lesson_progress`.
 - پنل دانش‌آموز و نمایش پیشرفت دوره‌ها.
 - بارگذاری و حذف عکس پروفایل JPG/PNG/WebP تا ۲ مگابایت، در صورت اجرای SQL پایه.
