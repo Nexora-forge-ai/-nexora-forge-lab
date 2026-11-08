@@ -91,15 +91,15 @@
       <p class="auth-description">ثبت‌نام اختیاری است؛ بدون حساب هم می‌توانی از درس‌ها استفاده کنی.</p>
       <div class="auth-tabs"><button type="button" class="auth-tab active" id="showLogin">ورود</button><button type="button" class="auth-tab" id="showSignup">ثبت‌نام</button></div>
       <form id="loginForm" class="auth-form">
-        <label for="loginEmail">ایمیل</label><input id="loginEmail" type="email" autocomplete="email" required placeholder="name@example.com">
+        <label for="loginEmail">شناسهٔ دانش‌آموزی ۱۲ کاراکتری</label><input id="loginEmail" type="text" inputmode="latin" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="12" minlength="12" pattern="[a-zA-Z0-9]{12}" required placeholder="مثلاً a3k7m9p2q4x8">
         <label for="loginPassword">رمز عبور</label><input id="loginPassword" type="password" autocomplete="current-password" required minlength="8" placeholder="حداقل ۸ نویسه">
         <button class="btn primary" type="submit">ورود</button>
         <button class="auth-forgot-link" id="studentForgotPassword" type="button">فراموشی رمز عبور</button>
       </form>
       <form id="signupForm" class="auth-form" hidden>
         <label for="signupName">نام نمایشی</label><input id="signupName" type="text" autocomplete="name" maxlength="60" required placeholder="نام شما">
-        <label for="signupEmail">ایمیل</label><input id="signupEmail" type="email" autocomplete="email" required placeholder="name@example.com">
-        <label for="signupPassword">رمز عبور</label><input id="signupPassword" type="password" autocomplete="new-password" minlength="10" required placeholder="حداقل ۱۰ نویسه، شامل حرف و عدد"><label for="signupPasswordConfirm">تکرار رمز عبور</label><input id="signupPasswordConfirm" type="password" autocomplete="new-password" minlength="10" required placeholder="رمز را دوباره وارد کن">
+        <label for="signupStudentCode">شناسهٔ دانش‌آموزی (۱۲ کاراکتر؛ قابل تغییر)</label><input id="signupStudentCode" type="text" inputmode="latin" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="12" minlength="12" pattern="[a-zA-Z0-9]{12}" required><small class="auth-description">این شناسه را برای ورود نگه دار. فقط حروف انگلیسی و اعداد مجازند.</small><label for="signupEmail">ایمیل (برای تأیید حساب و بازیابی رمز)</label><input id="signupEmail" type="email" autocomplete="email" required placeholder="name@example.com">
+        <label for="signupPassword">رمز عبور</label><input id="signupPassword" type="password" autocomplete="new-password" minlength="8" maxlength="16" required placeholder="۸ تا ۱۶ نویسه، شامل حرف و عدد"><label for="signupPasswordConfirm">تکرار رمز عبور</label><input id="signupPasswordConfirm" type="password" autocomplete="new-password" minlength="10" required placeholder="رمز را دوباره وارد کن">
         <button class="btn primary" type="submit">ساخت حساب</button>
       </form>
       <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
@@ -107,7 +107,7 @@
     </section>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=11" defer></script>
-  <script src="student-auth.js?v=5" defer></script>
+  <script src="app.js?v=12" defer></script>
+  <script src="student-auth.js?v=6" defer></script>
 </body>
 </html>
