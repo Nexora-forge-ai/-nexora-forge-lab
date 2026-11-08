@@ -26,7 +26,7 @@ Deno.serve(async req=>{
  const userId=created.user.id;
  const {error:profileError}=await admin.from("academy_profiles").upsert({user_id:userId,display_name:name,student_code:code,account_status:"active"},{onConflict:"user_id"});
  if(profileError){await admin.auth.admin.deleteUser(userId);return out(500,{error:"ساخت پروفایل انجام نشد؛ حساب ناقص پاک شد."});}
- await admin.from("academy_user_roles").upsert({user_id:userId,role:"student"},{onConflict:"user_id",ignoreDuplicates:true});
+ await admin.from("academy_user_roles").insert({user_id:userId,role:"student"});
  const {data:session,error:loginError}=await auth.auth.signInWithPassword({email:emailFor(code),password});
  if(loginError||!session.session){await admin.auth.admin.deleteUser(userId);return out(500,{error:"حساب ساخته شد اما ورود اولیه ناموفق بود؛ دوباره ثبت‌نام کن."});}
  return out(201,{access_token:session.session.access_token,refresh_token:session.session.refresh_token,user:session.user,student_code:code});
