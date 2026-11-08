@@ -156,7 +156,10 @@ for insert to authenticated with check(user_id=(select auth.uid()) and public.ac
 drop policy if exists "progress_update_self" on public.academy_lesson_progress;
 create policy "progress_update_self" on public.academy_lesson_progress
 for update to authenticated using(user_id=(select auth.uid()) and public.academy_is_active_user())
-with check(user_id=(select auth.uid()) and public.academy_is_active_user());
+with check(user_id=(select auth.uid()) and public.academy_is_active_user() and exists(
+ select 1 from public.academy_lessons l join public.academy_courses c on c.id=l.course_id
+ where l.id=lesson_id and l.status='published' and c.status='published'
+));
 
 drop policy if exists "attempts_read_self_or_admin" on public.academy_quiz_attempts;
 create policy "attempts_read_self_or_admin" on public.academy_quiz_attempts
