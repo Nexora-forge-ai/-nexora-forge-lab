@@ -1,11 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json; charset=utf-8"};
 const json=(status:number,body:Record<string,unknown>)=>new Response(JSON.stringify(body),{status,headers:corsHeaders});
+const readKey=(pluralName:string,legacyName:string)=>{
+ const raw=Deno.env.get(pluralName);
+ if(raw){try{const keys=JSON.parse(raw);if(typeof keys.default==="string")return keys.default;}catch{/* legacy fallback */}}
+ return Deno.env.get(legacyName)??"";
+};
 async function hashKey(value:string,pepper:string){const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(pepper+":"+value));return Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,"0")).join("");}
 Deno.serve(async req=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:corsHeaders});
  if(req.method!=="POST")return json(405,{error:"Method not allowed"});
- const url=Deno.env.get("SUPABASE_URL"),anon=Deno.env.get("SUPABASE_ANON_KEY"),service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+ const url=Deno.env.get("SUPABASE_URL"),anon=readKey("SUPABASE_PUBLISHABLE_KEYS","SUPABASE_ANON_KEY"),service=readKey("SUPABASE_SECRET_KEYS","SUPABASE_SERVICE_ROLE_KEY");
  if(!url||!anon||!service)return json(500,{error:"Server configuration is incomplete"});
  let body:{student_code?:string};try{body=await req.json();}catch{return json(400,{error:"درخواست نامعتبر است."});}
  const code=String(body.student_code??"").trim().toLowerCase();
