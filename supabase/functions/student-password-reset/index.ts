@@ -10,9 +10,6 @@ Deno.serve(async req=>{
  let body:{student_code?:string};try{body=await req.json();}catch{return json(400,{error:"درخواست نامعتبر است."});}
  const code=String(body.student_code??"").trim().toLowerCase();
  if(!/^[a-z0-9]{12}$/.test(code))return json(400,{error:"شناسه باید دقیقاً ۱۲ حرف یا عدد انگلیسی باشد."});
- const origin=req.headers.get("origin")||"";
- const allowedOrigin=/^https:\/\/[a-z0-9-]+\.pages\.dev$/i.test(origin)?"https://"+new URL(origin).host:"";
- if(!allowedOrigin)return json(400,{error:"نشانی بازگشت معتبر نیست."});
  const ip=req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||"unknown";
  const [ipHash,codeHash]=await Promise.all([hashKey("ip:"+ip,service),hashKey("code:"+code,service)]);
  const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
@@ -22,15 +19,13 @@ Deno.serve(async req=>{
   if(error)return json(503,{error:"سامانه بازیابی موقتاً در دسترس نیست."});
   if(data?.allowed===false)return json(429,{error:"درخواست‌های زیاد؛ ۱۵ دقیقه دیگر دوباره تلاش کن."});
  }
- const recordFailure=()=>Promise.all([ipHash,codeHash].map(key_hash=>admin.rpc("academy_check_login_rate_limit",{p_key_hash, p_failed:true})));
+ await Promise.all([ipHash,codeHash].map(key_hash=>admin.rpc("academy_check_login_rate_limit",{p_key_hash:key_hash,p_failed:true})));
  const {data:profile}=await admin.from("academy_profiles").select("user_id,account_status").eq("student_code",code).maybeSingle();
  if(profile?.account_status==="active"){
   const {data:user}=await admin.auth.admin.getUserById(profile.user_id);
   if(user?.user?.email){
-   await auth.auth.resetPasswordForEmail(user.user.email,{redirectTo:allowedOrigin+"/student.html"});
+   await auth.auth.resetPasswordForEmail(user.user.email);
   }
- }else{
-  await recordFailure();
  }
  return json(200,{ok:true,message:"اگر شناسه معتبر و حساب فعال باشد، لینک بازیابی به ایمیل ثبت‌شده ارسال می‌شود."});
 });
