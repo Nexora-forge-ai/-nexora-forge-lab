@@ -45,8 +45,17 @@ $("lessonForm").onsubmit=async e=>{e.preventDefault();try{const id=$("lessonOldI
 $("lessonReset").onclick=resetLesson;
 function renderStudents(){
  const q=$("studentSearch").value.trim().toLowerCase();
- const filtered=students.filter(s=>[s.display_name,s.email,s.user_id].some(v=>String(v||"").toLowerCase().includes(q)));
- $("studentListAdmin").innerHTML=filtered.length?filtered.map(s=>'<article class="student-box cms-row"><strong>'+esc(s.display_name||s.email||"دانش‌آموز")+'</strong><p>'+esc(s.email||"بدون ایمیل")+' · ثبت‌نام: '+new Date(s.created_at).toLocaleDateString("fa-IR")+' · درس تکمیل‌شده: '+s.completed_lessons+' · آزمون: '+s.quiz_attempts+'</p><small>شناسه حساب: '+esc(s.user_id)+'</small><div class="actions">'+(s.email?'<button class="btn small" data-reset-student="'+esc(s.email)+'">ارسال لینک بازیابی رمز</button>':"")+'</div></article>').join(""):(students.length?"دانش‌آموزی با این جستجو پیدا نشد.":"هنوز دانش‌آموزی ثبت‌نام نکرده است.");
+ const filtered=students.filter(s=>[s.display_name,s.email,s.user_id,s.student_code].some(v=>String(v||"").toLowerCase().includes(q)));
+ $("studentListAdmin").innerHTML=filtered.length?filtered.map(s=>'<article class="student-box cms-row"><strong>'+esc(s.display_name||s.email||"دانش‌آموز")+'</strong><p>'+esc(s.email||"بدون ایمیل")+' · ثبت‌نام: '+new Date(s.created_at).toLocaleDateString("fa-IR")+' · درس تکمیل‌شده: '+s.completed_lessons+' · آزمون: '+s.quiz_attempts+'</p><small>شناسه دانش‌آموزی: <b>'+esc(s.student_code||"ثبت نشده")+'</b></small><br><small>وضعیت: '+(s.account_status==="blocked"?"مسدود":"فعال")+'</small><div class="actions">'+(s.email?'<button class="btn small" data-reset-student="'+esc(s.email)+'">ارسال لینک بازیابی رمز</button>':"")+'<button class="btn small '+(s.account_status==="blocked"?"primary":"danger")+'" data-toggle-student="'+esc(s.user_id)+'" data-next-status="'+(s.account_status==="blocked"?"active":"blocked")+'">'+(s.account_status==="blocked"?"فعال‌سازی حساب":"مسدودسازی حساب")+'</button></div></article>').join(""):(students.length?"دانش‌آموزی با این جستجو پیدا نشد.":"هنوز دانش‌آموزی ثبت‌نام نکرده است.");
+ document.querySelectorAll("[data-toggle-student]").forEach(b=>b.onclick=async()=>{
+  const user_id=b.dataset.toggleStudent,status=b.dataset.nextStatus;
+  const action=status==="blocked"?"مسدودسازی":"فعال‌سازی";
+  if(!confirm(action+" حساب این دانش‌آموز انجام شود؟"))return;
+  b.disabled=true;
+  try{const {data,error}=await db.functions.invoke("academy-student-account",{body:{user_id,status}});if(error)throw error;if(data?.error)throw Error(data.error);say(status==="blocked"?"حساب دانش‌آموز مسدود شد.":"حساب دانش‌آموز فعال شد.",true);await loadStudents();}
+  catch(e){say("تغییر وضعیت انجام نشد: "+e.message);}
+  finally{b.disabled=false;}
+ });
  document.querySelectorAll("[data-reset-student]").forEach(b=>b.onclick=async()=>{
   const email=b.dataset.resetStudent;
   if(!confirm("لینک بازیابی رمز برای "+email+" ارسال شود؟"))return;
