@@ -92,17 +92,6 @@ $("loginForm").addEventListener("submit",async e=>{
  }
  catch(err){setMessage(err.message||"ورود انجام نشد.");}finally{setBusy(false);}
 });
-$("studentForgotPassword").addEventListener("click",async()=>{
- const student_code=$("loginEmail").value.trim().toLowerCase();
- if(!/^[a-z0-9]{12}$/.test(student_code)){setMessage("ابتدا شناسهٔ ۱۲ کاراکتری حساب را وارد کن.");$("loginEmail").focus();return;}
- setMessage("در حال بررسی و ارسال لینک بازیابی...");
- try{
-  const response=await fetch(SUPABASE_URL+"/functions/v1/student-password-reset",{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},body:JSON.stringify({student_code})});
-  const result=await response.json().catch(()=>({}));
-  if(!response.ok)throw Error(result.error||"درخواست بازیابی انجام نشد.");
-  setMessage(result.message||"اگر حساب فعال باشد، لینک بازیابی ارسال می‌شود.",true);
- }catch(err){setMessage(err.message||"ارسال لینک بازیابی انجام نشد.");}
-});
 $("signupForm").addEventListener("submit",async e=>{
  e.preventDefault();if(busy)return;setBusy(true);setMessage("در حال ساخت حساب...");
  try{
@@ -111,10 +100,13 @@ $("signupForm").addEventListener("submit",async e=>{
   if(!/^(?=.*[A-Za-z])(?=.*\d).{8,16}$/.test(password))throw Error("رمز باید ۸ تا ۱۶ نویسه و شامل حداقل یک حرف انگلیسی و یک عدد باشد.");
   const student_code=$("signupStudentCode").value.trim().toLowerCase();
   if(!/^[a-z0-9]{12}$/.test(student_code))throw Error("شناسه باید دقیقاً ۱۲ حرف یا عدد انگلیسی باشد.");
-  const {data,error}=await db.auth.signUp({email:$("signupEmail").value.trim(),password,options:{data:{display_name:name,student_code},emailRedirectTo:new URL("student.html",location.href).href}});
+  const response=await fetch(SUPABASE_URL+"/functions/v1/student-register",{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},body:JSON.stringify({display_name:name,student_code,password})});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(result.error||"ثبت‌نام انجام نشد.");
+  const {data,error}=await db.auth.setSession({access_token:result.access_token,refresh_token:result.refresh_token});
   if(error)throw error;
-  if(data.session){closeModal();await applySession(data.session);location.href="student.html";}
-  else setMessage("حساب ساخته شد. شناسهٔ ورود تو: "+student_code+" — آن را نگه دار و ایمیلت را تأیید کن.",true);
+  setMessage("حساب ساخته شد. شناسه ورود: "+student_code,true);
+  closeModal();await applySession(data.session);location.href="student.html";
  }catch(err){setMessage(err.message||"ثبت‌نام انجام نشد.");}finally{setBusy(false);}
 });
 $("studentLogout").addEventListener("click",async()=>{const {error}=await db.auth.signOut();if(error){alert("خروج انجام نشد: "+error.message);return;}await applySession(null);});
