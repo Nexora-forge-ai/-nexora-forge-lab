@@ -191,7 +191,7 @@ async function submitQuiz(){
  try{
   const {data:{session},error:sessionError}=await quizDb.auth.getSession();
   if(sessionError)throw sessionError;
-  if(!session){$("quizFeedback").textContent="برای ثبت نمره باید وارد حساب دانش‌آموزی شوی؛ پاسخ‌ها تا اینجا در همین صفحه باقی می‌مانند.";quizBusy=false;$("nextQuestion").textContent="ورود برای ثبت نمره";$("nextQuestion").disabled=false;$("nextQuestion").onclick=()=>{$("authOpenBtn")?.click();};return;}
+  if(!session){$("quizFeedback").textContent="برای ثبت نمره باید وارد حساب دانش‌آموزی شوی؛ پاسخ‌ها تا اینجا در همین صفحه باقی می‌مانند.";quizBusy=false;$("nextQuestion").textContent="برای ثبت نمره از دکمه ورود بالای صفحه استفاده کن";$("nextQuestion").disabled=true;return;}
   const payload=questions.map(q=>({question_id:q.id,option_id:answers[q.id]}));
   const {data,error}=await quizDb.rpc("academy_submit_quiz",{p_quiz_id:quiz.id,p_answers:payload});
   if(error)throw error;
