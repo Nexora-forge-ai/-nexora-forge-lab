@@ -100,7 +100,7 @@ $("signupForm").addEventListener("submit",async e=>{
   if(!/^(?=.*[A-Za-z])(?=.*\d).{8,16}$/.test(password))throw Error("رمز باید ۸ تا ۱۶ نویسه و شامل حداقل یک حرف انگلیسی و یک عدد باشد.");
   const student_code=$("signupStudentCode").value.trim().toLowerCase();
   if(!/^[a-z0-9]{12}$/.test(student_code))throw Error("شناسه باید دقیقاً ۱۲ حرف یا عدد انگلیسی باشد.");
-  const response=await fetch(SUPABASE_URL+"/functions/v1/student-register",{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},body:JSON.stringify({display_name:name,student_code,password})});
+  const response=await fetch(SUPABASE_URL+"/functions/v1/student-account",{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},body:JSON.stringify({action:"register",display_name:name,student_code,password})});
   const result=await response.json().catch(()=>({}));
   if(!response.ok)throw Error(result.error||"ثبت‌نام انجام نشد.");
   const {data,error}=await db.auth.setSession({access_token:result.access_token,refresh_token:result.refresh_token});
