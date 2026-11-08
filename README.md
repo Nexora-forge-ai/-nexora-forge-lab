@@ -47,7 +47,7 @@ supabase functions deploy student-password-reset --no-verify-jwt
 supabase functions deploy academy-student-account
 ```
 
-کلیدهای `SUPABASE_URL`، `SUPABASE_ANON_KEY` و `SUPABASE_SERVICE_ROLE_KEY` باید در محیط Edge Functions پروژه Supabase باشند؛ کلید service role را هرگز در GitHub یا فایل‌های frontend قرار نده. این متغیرها معمولاً به‌صورت پیش‌فرض در محیط Edge Functions موجودند.
+توابع ابتدا از متغیرهای جدید `SUPABASE_PUBLISHABLE_KEYS` و `SUPABASE_SECRET_KEYS` استفاده می‌کنند و برای سازگاری، متغیرهای قدیمی را هم به‌عنوان fallback می‌خوانند. Supabase این متغیرها را در محیط Edge Functions تزریق می‌کند؛ کلید secret را هرگز در GitHub یا فایل‌های frontend قرار نده.
 
 ## تنظیم SMTP برای ایمیل تأیید و بازیابی
 
