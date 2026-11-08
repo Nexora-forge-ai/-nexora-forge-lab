@@ -10,7 +10,7 @@ async function start(){
  if(!session){location.replace("index.html?auth=login");return;}
  const user=session.user;
  const [{data:profile,error:pErr},{data:progress,error:prErr},{data:courseRows,error:cErr},{data:lessonRows,error:lErr},{data:attempts,error:qErr},{count,error:qcErr},{data:ads,error:aErr},{data:roles,error:rErr}]=await Promise.all([
-  db.from("academy_profiles").select("display_name,avatar_path").eq("user_id",user.id).maybeSingle(),
+  db.from("academy_profiles").select("display_name,avatar_path,student_code").eq("user_id",user.id).maybeSingle(),
   db.from("academy_lesson_progress").select("lesson_id").eq("user_id",user.id).eq("status","completed"),
   db.from("academy_courses").select("id,title").eq("status","published").order("sort_order"),
   db.from("academy_lessons").select("id,course_id").eq("status","published").order("sort_order"),
