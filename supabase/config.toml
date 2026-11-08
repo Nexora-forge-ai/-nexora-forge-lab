@@ -3,3 +3,6 @@ verify_jwt = false
 
 [functions.academy-student-account]
 verify_jwt = true
+
+[functions.student-password-reset]
+verify_jwt = false
