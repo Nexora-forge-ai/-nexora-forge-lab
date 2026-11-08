@@ -262,4 +262,4 @@ async function loadPublishedCurriculum(){
  }
 }
 $("year").textContent=new Date().getFullYear();
-(async()=>{await loadPublishedCurriculum();renderCourses();renderCourseSelect();updateProgress();renderLesson();selectTab("html");renderPreview();await loadQuiz();})();
+(async()=>{await loadPublishedCurriculum();renderCourses();renderCourseSelect();updateProgress();renderLesson();selectTab("html");renderPreview();await loadQuiz().catch(error=>{$("quizFeedback").textContent="بارگذاری آزمون ناموفق بود: "+error.message;console.error("Quiz load failed:",error);});})();
