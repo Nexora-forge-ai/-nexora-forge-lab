@@ -45,24 +45,18 @@ $("lessonForm").onsubmit=async e=>{e.preventDefault();try{const id=$("lessonOldI
 $("lessonReset").onclick=resetLesson;
 function renderStudents(){
  const q=$("studentSearch").value.trim().toLowerCase();
- const filtered=students.filter(s=>[s.display_name,s.email,s.user_id,s.student_code].some(v=>String(v||"").toLowerCase().includes(q)));
- $("studentListAdmin").innerHTML=filtered.length?filtered.map(s=>'<article class="student-box cms-row"><strong>'+esc(s.display_name||s.email||"دانش‌آموز")+'</strong><p>'+esc(s.email||"بدون ایمیل")+' · ثبت‌نام: '+new Date(s.created_at).toLocaleDateString("fa-IR")+' · درس تکمیل‌شده: '+s.completed_lessons+' · آزمون: '+s.quiz_attempts+'</p><small>شناسه دانش‌آموزی: <b>'+esc(s.student_code||"ثبت نشده")+'</b></small><br><small>وضعیت: '+(s.account_status==="blocked"?"مسدود":"فعال")+'</small><div class="actions">'+(s.email?'<button class="btn small" data-reset-student="'+esc(s.email)+'">ارسال لینک بازیابی رمز</button>':"")+'<button class="btn small '+(s.account_status==="blocked"?"primary":"danger")+'" data-toggle-student="'+esc(s.user_id)+'" data-next-status="'+(s.account_status==="blocked"?"active":"blocked")+'">'+(s.account_status==="blocked"?"فعال‌سازی حساب":"مسدودسازی حساب")+'</button></div></article>').join(""):(students.length?"دانش‌آموزی با این جستجو پیدا نشد.":"هنوز دانش‌آموزی ثبت‌نام نکرده است.");
+ const filtered=students.filter(x=>[x.display_name,x.user_id,x.student_code].some(v=>String(v||"").toLowerCase().includes(q)));
+ $("studentListAdmin").innerHTML=filtered.length?filtered.map(x=>'<article class="student-box cms-row"><strong>'+esc(x.display_name||"دانش‌آموز")+'</strong><p>ثبت‌نام: '+new Date(x.created_at).toLocaleDateString("fa-IR")+' · درس تکمیل‌شده: '+x.completed_lessons+' · آزمون: '+x.quiz_attempts+'</p><small>شناسه دانش‌آموزی: <b>'+esc(x.student_code||"ثبت نشده")+'</b></small><br><small>وضعیت: '+(x.account_status==="blocked"?"مسدود":"فعال")+'</small><div class="actions"><button class="btn small" data-admin-reset="'+esc(x.user_id)+'">تعیین رمز موقت</button><button class="btn small '+(x.account_status==="blocked"?"primary":"danger")+'" data-toggle-student="'+esc(x.user_id)+'" data-next-status="'+(x.account_status==="blocked"?"active":"blocked")+'">'+(x.account_status==="blocked"?"فعال‌سازی حساب":"مسدودسازی حساب")+'</button></div></article>').join(""):(students.length?"دانش‌آموزی با این جستجو پیدا نشد.":"هنوز دانش‌آموزی ثبت‌نام نکرده است.");
  document.querySelectorAll("[data-toggle-student]").forEach(b=>b.onclick=async()=>{
-  const user_id=b.dataset.toggleStudent,status=b.dataset.nextStatus;
-  const action=status==="blocked"?"مسدودسازی":"فعال‌سازی";
-  if(!confirm(action+" حساب این دانش‌آموز انجام شود؟"))return;
-  b.disabled=true;
-  try{const {data,error}=await db.functions.invoke("academy-student-account",{body:{user_id,status}});if(error)throw error;if(data?.error)throw Error(data.error);say(data?.warning|| (status==="blocked"?"حساب دانش‌آموز مسدود شد.":"حساب دانش‌آموز فعال شد."),!data?.warning);await loadStudents();}
-  catch(e){say("تغییر وضعیت انجام نشد: "+e.message);}
-  finally{b.disabled=false;}
+  const user_id=b.dataset.toggleStudent,status=b.dataset.nextStatus,action=status==="blocked"?"مسدودسازی":"فعال‌سازی";
+  if(!confirm(action+" حساب این دانش‌آموز انجام شود؟"))return;b.disabled=true;
+  try{const {data,error}=await db.functions.invoke("academy-student-account",{body:{user_id,status}});if(error)throw error;if(data?.error)throw Error(data.error);say(data?.warning||(status==="blocked"?"حساب دانش‌آموز مسدود شد.":"حساب دانش‌آموز فعال شد."),!data?.warning);await loadStudents();}
+  catch(e){say("تغییر وضعیت انجام نشد: "+e.message);}finally{b.disabled=false;}
  });
- document.querySelectorAll("[data-reset-student]").forEach(b=>b.onclick=async()=>{
-  const email=b.dataset.resetStudent;
-  if(!confirm("لینک بازیابی رمز برای "+email+" ارسال شود؟"))return;
-  b.disabled=true;
-  try{const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:new URL("student.html",location.href).href});if(error)throw error;say("در صورت فعال بودن ایمیل، لینک بازیابی برای دانش‌آموز ارسال شد.",true);}
-  catch(e){say("ارسال لینک بازیابی انجام نشد: "+e.message);}
-  finally{b.disabled=false;}
+ document.querySelectorAll("[data-admin-reset]").forEach(b=>b.onclick=async()=>{
+  const user_id=b.dataset.adminReset;if(!confirm("برای این دانش‌آموز رمز موقت جدید ساخته شود؟ رمز قبلی بلافاصله بی‌اعتبار می‌شود."))return;b.disabled=true;
+  try{const {data,error}=await db.functions.invoke("admin-reset-student-password",{body:{user_id}});if(error)throw error;if(data?.error)throw Error(data.error);window.prompt("این رمز فقط یک بار نمایش داده می‌شود. آن را امن به دانش‌آموز تحویل بده:",data.temporary_password);say("رمز موقت ساخته شد. دانش‌آموز باید پس از ورود آن را تغییر دهد.",true);}
+  catch(e){say("تعیین رمز موقت ناموفق بود: "+e.message);}finally{b.disabled=false;}
  });
 }
 async function loadStudents(){const {data,error}=await db.rpc("academy_admin_student_overview");if(error)throw error;students=data||[];renderStudents();}
