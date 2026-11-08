@@ -149,6 +149,51 @@ $$;
 revoke all on function public.academy_check_login_rate_limit(text,boolean) from public,anon,authenticated;
 grant execute on function public.academy_check_login_rate_limit(text,boolean) to service_role;
 
+-- Admin overview exposes only the public account identifier and moderation state.
+drop function if exists public.academy_admin_student_overview();
+create function public.academy_admin_student_overview()
+returns table (
+  user_id uuid,
+  email text,
+  display_name text,
+  student_code text,
+  account_status text,
+  created_at timestamptz,
+  completed_lessons bigint,
+  quiz_attempts bigint
+)
+language sql stable security definer
+set search_path=public
+as $academy_admin_overview$
+  select p.user_id,u.email,p.display_name,p.student_code,p.account_status,u.created_at,
+    (select count(*) from public.academy_lesson_progress lp where lp.user_id=p.user_id and lp.status='completed'),
+    (select count(*) from public.academy_quiz_attempts qa where qa.user_id=p.user_id)
+  from public.academy_profiles p
+  join auth.users u on u.id=p.user_id
+  where public.academy_is_admin()
+  order by u.created_at desc;
+$academy_admin_overview$;
+revoke all on function public.academy_admin_student_overview() from public,anon;
+grant execute on function public.academy_admin_student_overview() to authenticated;
+
+-- Avatar upload/read/delete are unavailable to blocked students.
+drop policy if exists "academy_avatars_owner_read" on storage.objects;
+create policy "academy_avatars_owner_read" on storage.objects
+for select to authenticated using (
+ bucket_id='academy-avatars' and public.academy_is_active_user() and
+ ((storage.foldername(name))[1]=(select auth.uid())::text or public.academy_is_admin())
+);
+drop policy if exists "academy_avatars_owner_insert" on storage.objects;
+create policy "academy_avatars_owner_insert" on storage.objects
+for insert to authenticated with check (bucket_id='academy-avatars' and public.academy_is_active_user() and (storage.foldername(name))[1]=(select auth.uid())::text);
+drop policy if exists "academy_avatars_owner_update" on storage.objects;
+create policy "academy_avatars_owner_update" on storage.objects
+for update to authenticated using (bucket_id='academy-avatars' and public.academy_is_active_user() and (storage.foldername(name))[1]=(select auth.uid())::text)
+with check (bucket_id='academy-avatars' and public.academy_is_active_user() and (storage.foldername(name))[1]=(select auth.uid())::text);
+drop policy if exists "academy_avatars_owner_delete" on storage.objects;
+create policy "academy_avatars_owner_delete" on storage.objects
+for delete to authenticated using (bucket_id='academy-avatars' and public.academy_is_active_user() and (storage.foldername(name))[1]=(select auth.uid())::text);
+
 -- Restrict student learning records when an account is blocked.
 drop policy if exists "progress_read_self_or_admin" on public.academy_lesson_progress;
 create policy "progress_read_self_or_admin" on public.academy_lesson_progress
