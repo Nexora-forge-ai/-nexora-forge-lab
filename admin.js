@@ -17,7 +17,6 @@ async function verifyAdmin(session){
 }
 async function guard(){const {data:{session},error}=await db.auth.getSession();if(error)throw error;if(!session){showLogin();return;}await verifyAdmin(session);}
 $("adminLoginForm").onsubmit=async e=>{e.preventDefault();const b=$("adminLoginButton");b.disabled=true;say("در حال بررسی...");try{const {data,error}=await db.auth.signInWithPassword({email:$("adminEmail").value.trim(),password:$("adminPassword").value});if(error)throw error;if(!data.session)throw Error("نشست ورود ساخته نشد.");await verifyAdmin(data.session);}catch(err){say(err.message==="Invalid login credentials"?"ایمیل یا رمز اشتباه است.":err.message);}finally{b.disabled=false;}};
-$("adminForgotPassword").onclick=async()=>{const email=$("adminEmail").value.trim();if(!email){say("ابتدا ایمیل مدیر را وارد کن.");return;}try{const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(error)throw error;say("اگر حسابی با این ایمیل وجود داشته باشد، لینک بازیابی ارسال می‌شود.",true);}catch(e){say(e.message);}};
 function languageFor(id){if(id.startsWith("html"))return"html";if(id.startsWith("css"))return"css";if(id.startsWith("javascript")||id.startsWith("js"))return"javascript";throw Error("شناسه دوره باید با html، css یا javascript شروع شود.");}
 function levelFor(value){const v=String(value||"").toLowerCase();if(v.includes("متوسط")||v.includes("intermediate"))return"intermediate";if(v.includes("پیشرفته")||v.includes("advanced"))return"advanced";return"beginner";}
 async function loadCourses(){
