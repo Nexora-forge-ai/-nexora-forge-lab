@@ -1,4 +1,4 @@
--- NEXORA FORGE ACADEMY INSTALL — PART 1/4
+-- NEXORA FORGE ACADEMY INSTALL — PART 1/21
 -- Run this file in order. Each part commits independently.
 
 begin;
