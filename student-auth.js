@@ -14,7 +14,12 @@ const localDone=()=>{try{const x=JSON.parse(localStorage.getItem("nexoraAcademyD
 function setMessage(text,success=false){if(!message)return;message.textContent=text;message.classList.toggle("success",success);}
 function openModal(tab="login"){modal.hidden=false;document.body.style.overflow="hidden";showTab(tab);}
 function closeModal(){modal.hidden=true;document.body.style.overflow="";}
-function showTab(tab){const signup=tab==="signup";$("loginForm").hidden=signup;$("signupForm").hidden=!signup;$("showLogin").classList.toggle("active",!signup);$("showSignup").classList.toggle("active",signup);$("authTitle").textContent=signup?"ساخت حساب دانش‌آموزی":"ورود به حساب دانش‌آموزی";setMessage("");}
+function makeStudentCode(){
+ const alphabet="abcdefghjkmnpqrstuvwxyz23456789",bytes=new Uint8Array(12);
+ crypto.getRandomValues(bytes);
+ return Array.from(bytes,b=>alphabet[b%alphabet.length]).join("");
+}
+function showTab(tab){const signup=tab==="signup";if(signup&&!$("signupStudentCode").value)$("signupStudentCode").value=makeStudentCode();$("loginForm").hidden=signup;$("signupForm").hidden=!signup;$("showLogin").classList.toggle("active",!signup);$("showSignup").classList.toggle("active",signup);$("authTitle").textContent=signup?"ساخت حساب دانش‌آموزی":"ورود به حساب دانش‌آموزی";setMessage("");}
 function setBusy(value){busy=value;document.querySelectorAll(".auth-form button").forEach(b=>b.disabled=value);}
 async function syncProgress(){
  if(!currentUser)return;
@@ -76,7 +81,15 @@ document.querySelectorAll("[data-auth-close]").forEach(el=>el.addEventListener("
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!modal.hidden)closeModal();});
 $("loginForm").addEventListener("submit",async e=>{
  e.preventDefault();if(busy)return;setBusy(true);setMessage("در حال ورود...");
- try{const {data,error}=await db.auth.signInWithPassword({email:$("loginEmail").value.trim(),password:$("loginPassword").value});if(error)throw error;closeModal();await applySession(data.session);location.href="student.html";}
+ try{
+  const student_code=$("loginEmail").value.trim().toLowerCase();
+  if(!/^[a-z0-9]{12}$/.test(student_code))throw Error("شناسه باید دقیقاً ۱۲ حرف یا عدد انگلیسی باشد.");
+  const response=await fetch(SUPABASE_URL+"/functions/v1/student-login",{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},body:JSON.stringify({student_code,password:$("loginPassword").value})});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(result.error||"ورود انجام نشد. شناسه و رمز را بررسی کن.");
+  const {data,error}=await db.auth.setSession({access_token:result.access_token,refresh_token:result.refresh_token});
+  if(error)throw error;closeModal();await applySession(data.session);location.href="student.html";
+ }
  catch(err){setMessage(err.message||"ورود انجام نشد.");}finally{setBusy(false);}
 });
 $("studentForgotPassword").addEventListener("click",async()=>{
@@ -91,8 +104,10 @@ $("signupForm").addEventListener("submit",async e=>{
  try{
   const name=$("signupName").value.trim(),password=$("signupPassword").value;
   if(password!==$("signupPasswordConfirm").value)throw Error("رمز عبور و تکرار آن یکسان نیستند.");
-  if(!/^(?=.*[A-Za-z])(?=.*\d).{10,}$/.test(password))throw Error("رمز باید حداقل ۱۰ نویسه و شامل حرف انگلیسی و عدد باشد.");
-  const {data,error}=await db.auth.signUp({email:$("signupEmail").value.trim(),password,options:{data:{display_name:name},emailRedirectTo:new URL("student.html",location.href).href}});
+  if(!/^(?=.*[A-Za-z])(?=.*\d).{8,16}$/.test(password))throw Error("رمز باید ۸ تا ۱۶ نویسه و شامل حداقل یک حرف انگلیسی و یک عدد باشد.");
+  const student_code=$("signupStudentCode").value.trim().toLowerCase();
+  if(!/^[a-z0-9]{12}$/.test(student_code))throw Error("شناسه باید دقیقاً ۱۲ حرف یا عدد انگلیسی باشد.");
+  const {data,error}=await db.auth.signUp({email:$("signupEmail").value.trim(),password,options:{data:{display_name:name,student_code},emailRedirectTo:new URL("student.html",location.href).href}});
   if(error)throw error;
   if(data.session){closeModal();await applySession(data.session);location.href="student.html";}
   else setMessage("حساب ساخته شد. ایمیلت را تأیید کن؛ سپس وارد شو.",true);
