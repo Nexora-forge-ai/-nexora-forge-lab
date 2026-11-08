@@ -114,7 +114,7 @@ $("signupForm").addEventListener("submit",async e=>{
   const {data,error}=await db.auth.signUp({email:$("signupEmail").value.trim(),password,options:{data:{display_name:name,student_code},emailRedirectTo:new URL("student.html",location.href).href}});
   if(error)throw error;
   if(data.session){closeModal();await applySession(data.session);location.href="student.html";}
-  else setMessage("حساب ساخته شد. ایمیلت را تأیید کن؛ سپس وارد شو.",true);
+  else setMessage("حساب ساخته شد. شناسهٔ ورود تو: "+student_code+" — آن را نگه دار و ایمیلت را تأیید کن.",true);
  }catch(err){setMessage(err.message||"ثبت‌نام انجام نشد.");}finally{setBusy(false);}
 });
 $("studentLogout").addEventListener("click",async()=>{const {error}=await db.auth.signOut();if(error){alert("خروج انجام نشد: "+error.message);return;}await applySession(null);});
