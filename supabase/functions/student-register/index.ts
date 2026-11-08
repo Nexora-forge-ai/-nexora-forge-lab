@@ -18,6 +18,13 @@ Deno.serve(async req=>{
  if(!codeOk(code))return out(400,{error:"شناسه باید دقیقاً ۱۲ حرف یا عدد انگلیسی باشد."});
  if(!/^(?=.*[A-Za-z])(?=.*\d).{8,16}$/.test(password))return out(400,{error:"رمز باید ۸ تا ۱۶ نویسه و شامل حرف انگلیسی و عدد باشد."});
  const {admin,auth}=clients(c);
+ const ip=req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||"unknown";
+ const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(c.secret+":signup:"+ip));
+ const ipHash=Array.from(new Uint8Array(digest)).map(x=>x.toString(16).padStart(2,"0")).join("");
+ const {data:limit,error:limitError}=await admin.rpc("academy_check_login_rate_limit",{p_key_hash:ipHash,p_failed:false});
+ if(limitError)return out(503,{error:"سامانه ثبت‌نام موقتاً در دسترس نیست."});
+ if(limit?.allowed===false)return out(429,{error:"درخواست‌های ثبت‌نام زیاد است؛ ۱۵ دقیقه دیگر دوباره تلاش کن."});
+ await admin.rpc("academy_check_login_rate_limit",{p_key_hash:ipHash,p_failed:true});
  const {data:exists,error:lookupError}=await admin.from("academy_profiles").select("user_id").eq("student_code",code).maybeSingle();
  if(lookupError)return out(503,{error:"بررسی شناسه ممکن نشد."});
  if(exists)return out(409,{error:"این شناسه قبلاً انتخاب شده است."});
