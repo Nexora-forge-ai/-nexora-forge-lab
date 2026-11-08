@@ -828,6 +828,11 @@ create policy "academy_avatars_owner_delete" on storage.objects
 for delete to authenticated using(bucket_id='academy-avatars' and public.academy_is_active_user()
  and (storage.foldername(name))[1]=(select auth.uid())::text);
 
+drop policy if exists "profile_update_self_or_admin" on public.academy_profiles;
+create policy "profile_update_self_or_admin" on public.academy_profiles
+for update to authenticated using((user_id=(select auth.uid()) and public.academy_is_active_user()) or public.academy_is_admin())
+with check((user_id=(select auth.uid()) and public.academy_is_active_user()) or public.academy_is_admin());
+
 drop policy if exists "progress_read_self_or_admin" on public.academy_lesson_progress;
 create policy "progress_read_self_or_admin" on public.academy_lesson_progress
 for select to authenticated using((user_id=(select auth.uid()) and public.academy_is_active_user()) or public.academy_is_admin());
