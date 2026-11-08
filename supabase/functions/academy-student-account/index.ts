@@ -50,20 +50,25 @@ Deno.serve(async (req) => {
     .from("academy_profiles").select("user_id").eq("user_id", userId).maybeSingle();
   if (targetError || !target) return json(404, { error: "حساب دانش‌آموز پیدا نشد." });
 
-  const { error: updateError } = await admin.from("academy_profiles")
-    .update({ account_status: status }).eq("user_id", userId);
-  if (updateError) return json(500, { error: "ذخیره وضعیت حساب ناموفق بود." });
+  if (status === "active") {
+    const { error: unbanError } = await admin.auth.admin.updateUserById(userId, { ban_duration: "none" });
+    if (unbanError) return json(500, { error: "رفع مسدودیت Auth ناموفق بود؛ وضعیت حساب تغییر نکرد." });
+    const { error: activateError } = await admin.from("academy_profiles")
+      .update({ account_status: "active" }).eq("user_id", userId);
+    if (activateError) {
+      await admin.auth.admin.updateUserById(userId, { ban_duration: "876000h" });
+      return json(500, { error: "فعال‌سازی پایگاه داده ناموفق بود؛ حساب دوباره مسدود شد." });
+    }
+    return json(200, { ok: true, status });
+  }
 
-  const { error: banError } = await admin.auth.admin.updateUserById(userId, {
-    ban_duration: status === "blocked" ? "876000h" : "none",
-  });
+  const { error: blockError } = await admin.from("academy_profiles")
+    .update({ account_status: "blocked" }).eq("user_id", userId);
+  if (blockError) return json(500, { error: "ذخیره وضعیت مسدودسازی ناموفق بود." });
+  const { error: banError } = await admin.auth.admin.updateUserById(userId, { ban_duration: "876000h" });
   if (banError) {
-    // RLS and the sign-in edge function still enforce account_status.
-    return json(200, {
-      ok: true,
-      status,
-      warning: "وضعیت در پایگاه داده ذخیره شد؛ اعمال محدودیت نشست Auth نیازمند بررسی است.",
-    });
+    // RLS and the student login function still enforce account_status.
+    return json(200, { ok: true, status, warning: "حساب در پایگاه داده مسدود شد؛ نشست Auth نیز نیازمند بررسی است." });
   }
   return json(200, { ok: true, status });
 });
