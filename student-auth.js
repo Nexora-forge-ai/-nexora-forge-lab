@@ -93,11 +93,15 @@ $("loginForm").addEventListener("submit",async e=>{
  catch(err){setMessage(err.message||"ورود انجام نشد.");}finally{setBusy(false);}
 });
 $("studentForgotPassword").addEventListener("click",async()=>{
- const email=$("loginEmail").value.trim();
- if(!email){setMessage("ابتدا ایمیل حساب را وارد کن.");$("loginEmail").focus();return;}
- setMessage("در حال ارسال لینک بازیابی...");
- try{const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:new URL("student.html",location.href).href});if(error)throw error;setMessage("اگر حسابی با این ایمیل وجود داشته باشد، لینک بازیابی ارسال می‌شود.",true);}
- catch(err){setMessage(err.message||"ارسال لینک بازیابی انجام نشد.");}
+ const student_code=$("loginEmail").value.trim().toLowerCase();
+ if(!/^[a-z0-9]{12}$/.test(student_code)){setMessage("ابتدا شناسهٔ ۱۲ کاراکتری حساب را وارد کن.");$("loginEmail").focus();return;}
+ setMessage("در حال بررسی و ارسال لینک بازیابی...");
+ try{
+  const response=await fetch(SUPABASE_URL+"/functions/v1/student-password-reset",{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},body:JSON.stringify({student_code})});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(result.error||"درخواست بازیابی انجام نشد.");
+  setMessage(result.message||"اگر حساب فعال باشد، لینک بازیابی ارسال می‌شود.",true);
+ }catch(err){setMessage(err.message||"ارسال لینک بازیابی انجام نشد.");}
 });
 $("signupForm").addEventListener("submit",async e=>{
  e.preventDefault();if(busy)return;setBusy(true);setMessage("در حال ساخت حساب...");
