@@ -54,7 +54,7 @@ function renderStudents(){
  });
  document.querySelectorAll("[data-admin-reset]").forEach(b=>b.onclick=async()=>{
   const user_id=b.dataset.adminReset;if(!confirm("برای این دانش‌آموز رمز موقت جدید ساخته شود؟ رمز قبلی بلافاصله بی‌اعتبار می‌شود."))return;b.disabled=true;
-  try{const {data,error}=await db.functions.invoke("admin-reset-student-password",{body:{user_id}});if(error)throw error;if(data?.error)throw Error(data.error);window.prompt("این رمز فقط یک بار نمایش داده می‌شود. آن را امن به دانش‌آموز تحویل بده:",data.temporary_password);say("رمز موقت ساخته شد. دانش‌آموز باید پس از ورود آن را تغییر دهد.",true);}
+  try{const {data,error}=await db.functions.invoke("student-account",{body:{action:"admin_reset",user_id}});if(error)throw error;if(data?.error)throw Error(data.error);window.prompt("این رمز فقط یک بار نمایش داده می‌شود. آن را امن به دانش‌آموز تحویل بده:",data.temporary_password);say("رمز موقت ساخته شد. دانش‌آموز باید پس از ورود آن را تغییر دهد.",true);}
   catch(e){say("تعیین رمز موقت ناموفق بود: "+e.message);}finally{b.disabled=false;}
  });
 }
