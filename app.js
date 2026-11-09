@@ -146,75 +146,68 @@ $("clearAllCode").addEventListener("click",()=>{
 });
 $("menuBtn").addEventListener("click",()=>$("navLinks").classList.toggle("open"));
 document.querySelectorAll("#navLinks a").forEach(a=>a.addEventListener("click",()=>$("navLinks").classList.remove("open")));
-let quiz=null,questions=[],qi=0,answers={},quizBusy=false,quizSubmitted=false;
-const quizDb=window.supabase?.createClient(
- "https://nutgcqhcgytjglyuvmla.supabase.co",
- "sb_publishable_2HmqcVNPPPhULFeNPIbRlg_54LwTQEt",
- {auth:{persistSession:true,autoRefreshToken:false,detectSessionInUrl:false}}
-);
+let quiz=null,questions=[],qi=0,answers={},quizBusy=false,quizSubmitted=false,publishedQuizzes=[];
+const quizDb=window.supabase?.createClient("https://nutgcqhcgytjglyuvmla.supabase.co","sb_publishable_2HmqcVNPPPhULFeNPIbRlg_54LwTQEt",{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
 const quizEscape=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-async function loadQuiz(){
- if(!quizDb){$("quizFeedback").textContent="سرویس آزمون بارگذاری نشد.";return;}
- const {data:quizRow,error:quizError}=await quizDb.from("academy_quizzes").select("id,title").eq("status","published").order("created_at").limit(1).maybeSingle();
- if(quizError)throw quizError;
- if(!quizRow){$("quizQuestion").textContent="هنوز آزمونی منتشر نشده است."; $("quizOptions").innerHTML="";$("nextQuestion").disabled=true;return;}
- const {data:qRows,error:qError}=await quizDb.from("academy_quiz_questions").select("id,question_text,sort_order").eq("quiz_id",quizRow.id).order("sort_order");
- if(qError)throw qError;
- if(!qRows?.length){$("quizQuestion").textContent="این آزمون هنوز سؤال ندارد."; $("quizOptions").innerHTML="";$("nextQuestion").disabled=true;return;}
- const ids=qRows.map(q=>q.id);
- const {data:oRows,error:oError}=await quizDb.from("academy_quiz_options").select("id,question_id,option_text,sort_order").in("question_id",ids).order("sort_order");
- if(oError)throw oError;
- quiz=quizRow;
- questions=qRows.map(q=>({...q,options:(oRows||[]).filter(o=>o.question_id===q.id)}));
+async function loadQuizList(){
+ if(!quizDb)throw Error("سرویس آزمون بارگذاری نشد.");
+ const {data,error}=await quizDb.from("academy_quizzes").select("id,title,description,pass_percent,course_id").eq("status","published").like("title","آزمون سطح٪").order("created_at");
+ if(error)throw error;
+ publishedQuizzes=data||[];
+ $("quizSelect").innerHTML='<option value="">انتخاب آزمون موردنظر</option>'+publishedQuizzes.map(q=>'<option value="'+q.id+'">'+quizEscape(q.title)+'</option>').join("");
+ $("quizQuestion").textContent=publishedQuizzes.length?"برای شروع یکی از ۹ آزمون را انتخاب کن.":"هنوز آزمون سطح‌بندی‌شده‌ای منتشر نشده است.";
+ $("quizOptions").innerHTML="";$("quizCount").textContent=publishedQuizzes.length+" آزمون در دسترس";$("nextQuestion").disabled=true;
+}
+async function loadQuiz(quizId){
+ const {data:quizRow,error:quizError}=await quizDb.from("academy_quizzes").select("id,title,description,pass_percent").eq("id",quizId).eq("status","published").maybeSingle();
+ if(quizError)throw quizError;if(!quizRow)throw Error("آزمون انتخاب‌شده در دسترس نیست.");
+ const {data:qRows,error:qError}=await quizDb.from("academy_quiz_questions").select("id,question_text,sort_order,points").eq("quiz_id",quizRow.id).order("sort_order");if(qError)throw qError;
+ if(!qRows?.length)throw Error("این آزمون هنوز سؤال ندارد.");
+ const ids=qRows.map(q=>q.id);const {data:oRows,error:oError}=await quizDb.from("academy_quiz_options").select("id,question_id,option_text,sort_order").in("question_id",ids).order("sort_order");if(oError)throw oError;
+ quiz=quizRow;questions=qRows.map(q=>({...q,options:(oRows||[]).filter(o=>o.question_id===q.id)}));
  if(questions.some(q=>q.options.length<2))throw Error("یکی از سؤال‌های آزمون گزینه‌های کافی ندارد.");
- qi=0;answers={};quizSubmitted=false;renderQuiz();
+ qi=0;answers={};quizSubmitted=false;renderQuiz();$("quizFeedback").textContent=quizRow.description||"به همه سؤال‌ها پاسخ بده و سپس نتیجه را ثبت کن.";
 }
 function renderQuiz(){
- if(!questions.length)return;
- const q=questions[qi];
+ if(!questions.length)return;const q=questions[qi];
  $("quizCount").textContent="سؤال "+(qi+1)+" از "+questions.length;
  $("quizQuestion").textContent=q.question_text;
  $("quizOptions").innerHTML=q.options.map(o=>'<button type="button" class="quiz-option'+(answers[q.id]===o.id?" selected":"")+'" data-option-id="'+o.id+'">'+quizEscape(o.option_text)+'</button>').join("");
- $("quizFeedback").textContent="";
  $("nextQuestion").disabled=!answers[q.id]||quizBusy;
  $("nextQuestion").textContent=qi===questions.length-1?"ثبت پاسخ‌ها و دیدن نتیجه":"سؤال بعدی";
  document.querySelectorAll("[data-option-id]").forEach(b=>b.addEventListener("click",()=>{
-  if(quizBusy||quizSubmitted)return;
-  answers[q.id]=b.dataset.optionId;
+  if(quizBusy||quizSubmitted)return;answers[q.id]=b.dataset.optionId;
   document.querySelectorAll("[data-option-id]").forEach(x=>x.classList.toggle("selected",x===b));
   $("nextQuestion").disabled=false;
  }));
 }
 async function submitQuiz(){
  if(quizBusy||quizSubmitted)return;
+ if(questions.some(q=>!answers[q.id])){$("quizFeedback").textContent="لطفاً به همه سؤال‌ها پاسخ بده.";return;}
  quizBusy=true;$("nextQuestion").disabled=true;$("nextQuestion").textContent="در حال ثبت نتیجه...";
  try{
-  const {data:{session},error:sessionError}=await quizDb.auth.getSession();
-  if(sessionError)throw sessionError;
-  if(!session){$("quizFeedback").textContent="برای ثبت نمره باید وارد حساب دانش‌آموزی شوی؛ پاسخ‌ها تا اینجا در همین صفحه باقی می‌مانند.";quizBusy=false;$("nextQuestion").textContent="برای ثبت نمره از دکمه ورود بالای صفحه استفاده کن";$("nextQuestion").disabled=true;return;}
+  const {data:{session},error:sessionError}=await quizDb.auth.getSession();if(sessionError)throw sessionError;
+  if(!session){$("quizFeedback").textContent="برای ذخیره نمره باید ابتدا وارد حساب دانش‌آموزی شوی. پاسخ‌ها در همین صفحه باقی می‌مانند.";return;}
   const payload=questions.map(q=>({question_id:q.id,option_id:answers[q.id]}));
-  const {data,error}=await quizDb.rpc("academy_submit_quiz",{p_quiz_id:quiz.id,p_answers:payload});
-  if(error)throw error;
-  quizSubmitted=true;
-  $("quizCount").textContent="آزمون تکمیل شد";
-  $("quizQuestion").textContent="نتیجهٔ آزمون: "+data.percent+"٪";
-  $("quizOptions").innerHTML="";
-  $("quizFeedback").textContent=(data.passed?"قبول شدی. ":"نیاز به تمرین بیشتر داری. ")+"نمرهٔ "+data.score+" از "+data.max_score+" در پنل دانش‌آموز ذخیره شد.";
+  const {data,error}=await quizDb.rpc("academy_submit_quiz",{p_quiz_id:quiz.id,p_answers:payload});if(error)throw error;
+  quizSubmitted=true;$("quizCount").textContent="آزمون تکمیل شد";
+  $("quizQuestion").textContent="نتیجهٔ "+quiz.title+": "+data.percent+"٪";$("quizOptions").innerHTML="";
+  $("quizFeedback").textContent=(data.passed?"قبول شدی. ":"نیاز به تمرین بیشتر داری. ")+"نمرهٔ "+data.score+" از "+data.max_score+" ذخیره شد. حدنصاب قبولی "+quiz.pass_percent+"٪ است.";
   window.dispatchEvent(new CustomEvent("nexora:quiz-finished",{detail:data}));
-  $("nextQuestion").textContent="شروع دوباره آزمون";
-  $("nextQuestion").disabled=false;
+  $("nextQuestion").textContent="شروع دوباره همین آزمون";$("nextQuestion").disabled=false;
  }catch(error){
   $("quizFeedback").textContent=error.message==="ACCOUNT_BLOCKED"?"حساب تو مسدود است و امکان شرکت در آزمون نداری.":"ثبت آزمون انجام نشد: "+error.message;
-  $("nextQuestion").textContent="تلاش دوباره";
-  $("nextQuestion").disabled=false;
+  $("nextQuestion").textContent="تلاش دوباره";$("nextQuestion").disabled=false;
  }finally{quizBusy=false;}
 }
+$("quizSelect").addEventListener("change",async()=>{
+ try{if(!$("quizSelect").value){questions=[];quiz=null;$("quizQuestion").textContent="برای شروع یکی از آزمون‌ها را انتخاب کن.";$("quizOptions").innerHTML="";$("nextQuestion").disabled=true;return;}await loadQuiz($("quizSelect").value);}
+ catch(e){$("quizFeedback").textContent="بارگذاری آزمون ناموفق بود: "+e.message;}
+});
 $("nextQuestion").addEventListener("click",async()=>{
- if(quizSubmitted){qi=0;answers={};quizSubmitted=false;renderQuiz();return;}
- if(!questions.length)return;
- if(!answers[questions[qi].id])return;
- if(qi<questions.length-1){qi++;renderQuiz();return;}
- await submitQuiz();
+ if(quizSubmitted){await loadQuiz(quiz.id);return;}
+ if(!questions.length||!answers[questions[qi].id])return;
+ if(qi<questions.length-1){qi++;renderQuiz();return;}await submitQuiz();
 });
 async function loadPublishedCurriculum(){
  try{
@@ -262,4 +255,4 @@ async function loadPublishedCurriculum(){
  }
 }
 $("year").textContent=new Date().getFullYear();
-(async()=>{await loadPublishedCurriculum();renderCourses();renderCourseSelect();updateProgress();renderLesson();selectTab("html");renderPreview();await loadQuiz().catch(error=>{$("quizFeedback").textContent="بارگذاری آزمون ناموفق بود: "+error.message;console.error("Quiz load failed:",error);});})();
+(async()=>{await loadPublishedCurriculum();renderCourses();renderCourseSelect();updateProgress();renderLesson();selectTab("html");renderPreview();await loadQuizList().catch(error=>{$("quizFeedback").textContent="بارگذاری فهرست آزمون‌ها ناموفق بود: "+error.message;console.error("Quiz list failed:",error);});})();
