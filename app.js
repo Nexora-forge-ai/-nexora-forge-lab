@@ -151,7 +151,7 @@ const quizDb=window.supabase?.createClient("https://nutgcqhcgytjglyuvmla.supabas
 const quizEscape=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 async function loadQuizList(){
  if(!quizDb)throw Error("سرویس آزمون بارگذاری نشد.");
- const {data,error}=await quizDb.from("academy_quizzes").select("id,title,description,pass_percent,course_id").eq("status","published").like("title","آزمون سطح٪").order("created_at");
+ const {data,error}=await quizDb.from("academy_quizzes").select("id,title,description,pass_percent,course_id").eq("status","published").like("title","آزمون سطح%").order("created_at");
  if(error)throw error;
  publishedQuizzes=data||[];
  $("quizSelect").innerHTML='<option value="">انتخاب آزمون موردنظر</option>'+publishedQuizzes.map(q=>'<option value="'+q.id+'">'+quizEscape(q.title)+'</option>').join("");
