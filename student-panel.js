@@ -16,7 +16,7 @@ async function start(){
   db.from("academy_lessons").select("id,course_id").eq("status","published").order("sort_order"),
   db.from("academy_quiz_attempts").select("score,max_score,percent,submitted_at").eq("user_id",user.id).order("submitted_at",{ascending:false}).limit(5),
   db.from("academy_quiz_attempts").select("id",{count:"exact",head:true}).eq("user_id",user.id),
-  db.from("academy_ads").select("title,body,image_path,target_url,placement").eq("status","active").in("placement",["student","both"]).order("sort_order"),
+  db.from("academy_ads").select("title,body,image_path,target_url,placement").eq("status","active").in("placement",["student","both","student_top","student_courses","student_bottom"]).order("sort_order"),
   db.from("academy_user_roles").select("role").eq("user_id",user.id)
  ]);
  for(const e of [pErr,prErr,cErr,lErr,qErr,qcErr,aErr,rErr])if(e)throw e;
@@ -69,7 +69,11 @@ async function start(){
  $("quizCount").textContent=(count||0).toLocaleString("fa-IR");
  $("courseProgress").innerHTML=(courseRows||[]).map(c=>{const ids=(lessonRows||[]).filter(l=>l.course_id===c.id).map(l=>l.id),n=ids.filter(id=>done.includes(id)).length,pct=ids.length?Math.round(n/ids.length*100):0;return '<div class="student-course-row"><div class="student-course-title"><strong>'+esc(c.title)+'</strong><span>'+n+' از '+ids.length+' درس</span></div><div class="student-course-track"><span style="width:'+pct+'%"></span></div></div>';}).join("")||"هنوز دوره‌ای منتشر نشده است.";
  $("quizHistory").innerHTML=attempts?.length?attempts.map(q=>'<div class="student-quiz-row">امتیاز: <strong>'+q.score+' از '+q.max_score+'</strong> · '+q.percent+'٪ · '+new Date(q.submitted_at).toLocaleDateString("fa-IR")+'</div>').join(""):"هنوز آزمون نمره‌دار ثبت نشده است.";
- $("studentAds").innerHTML=ads?.length?ads.map(a=>'<article style="padding:12px 0;border-bottom:1px solid var(--line)"><strong>'+esc(a.title)+'</strong><p>'+esc(a.body)+'</p>'+(safeUrl(a.image_path)?'<img src="'+esc(safeUrl(a.image_path))+'" alt="" style="max-width:100%;max-height:180px;border-radius:10px">':"")+(safeUrl(a.target_url)?'<p><a class="btn small" href="'+esc(safeUrl(a.target_url))+'" target="_blank" rel="noopener noreferrer">مشاهده</a></p>':"")+'</article>').join(""):"فعلاً اطلاعیه‌ای منتشر نشده است.";
+ const adHtml=a=>'<article style="padding:12px 0;border-bottom:1px solid var(--line)"><strong>'+esc(a.title)+'</strong><p>'+esc(a.body)+'</p>'+(safeUrl(a.image_path)?'<img src="'+esc(safeUrl(a.image_path))+'" alt="" style="max-width:100%;max-height:180px;border-radius:10px">':"")+(safeUrl(a.target_url)?'<p><a class="btn small" href="'+esc(safeUrl(a.target_url))+'" target="_blank" rel="noopener noreferrer">مشاهده</a></p>':"")+'</article>';
+ const showAds=(id,items)=>{$(id).innerHTML=items.length?items.map(adHtml).join(""):"فعلاً تبلیغی برای این بخش منتشر نشده است.";};
+ showAds("studentAdsTop",ads.filter(a=>["student","both","student_top"].includes(a.placement)));
+ showAds("studentAdsCourses",ads.filter(a=>a.placement==="student_courses"));
+ showAds("studentAdsBottom",ads.filter(a=>a.placement==="student_bottom"));
  if((roles||[]).some(x=>["admin","super_admin"].includes(x.role)))$("adminShortcut").hidden=false;
 }
 $("logoutBtn").addEventListener("click",async()=>{const {error}=await db.auth.signOut();if(error){$("status").textContent=error.message;return;}location.replace("index.html");});
