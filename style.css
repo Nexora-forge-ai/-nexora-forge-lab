@@ -153,3 +153,19 @@ pre{
 
 .auth-forgot-link{display:block;width:100%;margin-top:8px;padding:7px;border:0;background:transparent;color:#ff8992;font:inherit;font-size:12px;text-align:center;cursor:pointer}
 .auth-forgot-link:hover{text-decoration:underline}
+
+/* Keep long course identifiers fully visible without changing their text */
+.course-icon{
+  width:max-content;
+  max-width:100%;
+  min-width:48px;
+  min-height:48px;
+  height:auto;
+  padding:8px 12px;
+  font-size:12px;
+  line-height:1.35;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:normal;
+  text-align:center;
+}
