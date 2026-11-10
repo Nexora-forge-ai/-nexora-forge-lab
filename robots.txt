@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin.html
+Disallow: /student.html
+
+Sitemap: https://nexora-forge-ai.github.io/-nexora-forge-lab/sitemap.xml
