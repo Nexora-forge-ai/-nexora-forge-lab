@@ -255,4 +255,25 @@ async function loadPublishedCurriculum(){
  }
 }
 $("year").textContent=new Date().getFullYear();
-(async()=>{await loadPublishedCurriculum();renderCourses();renderCourseSelect();updateProgress();renderLesson();selectTab("html");renderPreview();await loadQuizList().catch(error=>{$("quizFeedback").textContent="بارگذاری فهرست آزمون‌ها ناموفق بود: "+error.message;console.error("Quiz list failed:",error);});})();
+(async()=>{
+ await loadPublishedCurriculum();
+ const params=new URLSearchParams(window.location.search);
+ const requestedCourse=params.get("course");
+ const requestedLesson=Number.parseInt(params.get("lesson")||"0",10);
+ if(requestedCourse){
+  const match=keys.find(k=>{
+   const name=(courses[k].name||"").toLowerCase();
+   if(requestedCourse==="html")return name.includes("html");
+   if(requestedCourse==="css")return name.includes("css");
+   if(requestedCourse==="js")return name.includes("javascript");
+   return false;
+  });
+  if(match){
+   activeCourse=match;
+   activeLesson=Math.max(0,Math.min(Number.isFinite(requestedLesson)?requestedLesson:0,courses[match].lessons.length-1));
+  }
+ }
+ renderCourses();renderCourseSelect();updateProgress();renderLesson();selectTab("html");renderPreview();
+ if(requestedCourse)$("classroom").scrollIntoView({behavior:"smooth"});
+ await loadQuizList().catch(error=>{$("quizFeedback").textContent="بارگذاری فهرست آزمون‌ها ناموفق بود: "+error.message;console.error("Quiz list failed:",error);});
+})();
